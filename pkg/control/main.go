@@ -1811,7 +1811,7 @@ func (c Kok) DeleteAll(namespace string) {
 		panic(err.Error())
 	}
 
-	err = c.clientset.CoreV1().PersistentVolumeClaims(namespace).Delete(context.TODO(), "control-plane", metav1.DeleteOptions{})
+	err = c.clientset.CoreV1().PersistentVolumeClaims(namespace).Delete(context.TODO(), "control-plane-vol", metav1.DeleteOptions{})
 	if err != nil {
 		panic(err.Error())
 	}
