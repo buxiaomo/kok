@@ -45,3 +45,5 @@ spec:
           env:
             - name: TZ
               value: "Asia/Shanghai"
+            - name: WEBHOOK_URL
+              value: "{{ .Values.webhookUrl }}"
