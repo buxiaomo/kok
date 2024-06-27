@@ -3,6 +3,7 @@ kind: Service
 metadata:
   name: kok
 spec:
+  type: LoadBalancer
   selector:
     app: kok
   ports:
