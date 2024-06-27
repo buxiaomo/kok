@@ -48,7 +48,7 @@ pipeline {
         stage('deploy') {
             steps {
                 script{
-                    if(autodeploy) {
+                    if(params.autodeploy) {
                         withKubeConfig(caCertificate: '', clusterName: 'kubernetes', contextName: 'default', credentialsId: 'kubeconfig', namespace: 'kube-system', restrictKubeConfigAccess: false, serverUrl: 'https://172.16.115.11:6443') {
                             sh "helm upgrade -i kok --set hub=${env.REGISTRY_HOST}/${env.PROJECT_NAME} --set tag=${params.version} kok --create-namespace --namespace ${env.PROJECT_NAME}-${env.PROJECT_ENV}"
                         }
