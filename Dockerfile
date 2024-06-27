@@ -12,6 +12,9 @@ RUN apk add --no-cache curl \
     && adduser -D -h /app -u 1000 app
 WORKDIR /app
 COPY --from=builder /go/src/app/main ./main
+COPY --from=builder /go/src/app/templates ./templates
+COPY --from=builder /go/src/app/appmarket ./appmarket
+COPY --from=builder /go/src/app/static ./static
 EXPOSE 8080
 USER 1000
 CMD ["/app/main"]

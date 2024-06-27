@@ -102,7 +102,6 @@ func ClusterCreate(c *gin.Context) {
 		panic("bind: " + err.Error())
 	}
 
-	fmt.Println(info)
 	kok := control.New()
 	ns := kok.CreateNS(info.Namespace)
 	ns.CreatePVC("control-plane-vol")

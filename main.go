@@ -8,13 +8,17 @@ import (
 	"kok/routers"
 )
 
-// go:embed static
+// go:embed static/*
+// go:embed static/js/*
+// go:embed static/css/*
+// go:embed static/fonts/*
+// go:embed static/images/*
 var static embed.FS
 
-// go:embed templates
+// go:embed templates/*
 var templates embed.FS
 
-// go:embed appmarket
+// go:embed appmarket/*
 var appmarket embed.FS
 
 func init() {

@@ -1,0 +1,6 @@
+bin
+Dockerfile
+Jenkinsfile
+kubeconfig
+README.md
+.DS_Store
