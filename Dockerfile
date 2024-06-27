@@ -15,6 +15,8 @@ COPY --from=builder /go/src/app/main ./main
 COPY --from=builder /go/src/app/templates ./templates
 COPY --from=builder /go/src/app/appmarket ./appmarket
 COPY --from=builder /go/src/app/static ./static
+RUN mkdir -p ./kubeconfig \
+    && chown -R  1000.1000 /app
 EXPOSE 8080
 USER 1000
 CMD ["/app/main"]
