@@ -98,6 +98,9 @@ func (c Kok) CreateNS(name string) (namespace NameSpace, err error) {
 			},
 			ObjectMetaApplyConfiguration: &applymetav1.ObjectMetaApplyConfiguration{
 				Name: &name,
+				Labels: map[string]string{
+					"app": "control-plane",
+				},
 			},
 		},
 		metav1.ApplyOptions{
@@ -379,6 +382,9 @@ func (c NameSpace) CreatePVC(name string) error {
 			ObjectMetaApplyConfiguration: &applymetav1.ObjectMetaApplyConfiguration{
 				Name:      &name,
 				Namespace: &c.Name,
+				Labels: map[string]string{
+					"app": "control-plane",
+				},
 			},
 			Spec: &applycorev1.PersistentVolumeClaimSpecApplyConfiguration{
 				AccessModes: []corev1.PersistentVolumeAccessMode{
