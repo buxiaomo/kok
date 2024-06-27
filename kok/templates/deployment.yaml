@@ -14,6 +14,7 @@ spec:
       labels:
         app: kok
     spec:
+      serviceAccount: kok
       containers:
         - name: kok
           image: "{{ .Values.hub }}:{{ .Values.tag }}"
