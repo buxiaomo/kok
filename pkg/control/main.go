@@ -583,6 +583,7 @@ func (c NameSpace) CreateSvc() *string {
 }
 
 func (c NameSpace) CreateDeploy(name, registry, ver string, externalIp *string, serviceCidr, podCidr, nodePort string) {
+	fmt.Println(viper.GetString("WEBHOOK_URL"))
 	v := version.GetVersion(ver)
 	_, err := c.clientset.AppsV1().Deployments(c.Name).Apply(
 		context.TODO(),
