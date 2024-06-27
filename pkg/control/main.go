@@ -3,6 +3,7 @@ package control
 import (
 	"context"
 	"fmt"
+	"github.com/spf13/viper"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -16,6 +17,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 	"kok/pkg/version"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -80,7 +82,7 @@ func (c Kok) HasDefaultSC() bool {
 	return false
 }
 
-func (c Kok) CreateNS(name string) NameSpace {
+func (c Kok) CreateNS(name string) (namespace NameSpace, err error) {
 	ns, err := c.clientset.CoreV1().Namespaces().Apply(
 		context.TODO(),
 		&applycorev1.NamespaceApplyConfiguration{
@@ -102,12 +104,12 @@ func (c Kok) CreateNS(name string) NameSpace {
 			FieldManager: "kok",
 		})
 	if err != nil {
-		panic(err.Error())
+		log.Printf(err.Error())
 	}
 	return NameSpace{
 		Name:      ns.Name,
 		clientset: c.clientset,
-	}
+	}, err
 	//return ns.Name
 }
 
@@ -116,7 +118,7 @@ func (c Kok) GetInstance() (*corev1.PodList, error) {
 		LabelSelector: "app=control-plane",
 	})
 }
-func (c NameSpace) CreateKubeconfig() {
+func (c NameSpace) CreateKubeconfig() error {
 	_, err := c.clientset.CoreV1().ConfigMaps(c.Name).Apply(
 		context.TODO(),
 		&applycorev1.ConfigMapApplyConfiguration{
@@ -203,12 +205,10 @@ users:
 		metav1.ApplyOptions{
 			FieldManager: "kok",
 		})
-	if err != nil {
-		panic(err.Error())
-	}
+	return err
 }
 
-func (c NameSpace) CreateKubeproxyConfig() {
+func (c NameSpace) CreateKubeproxyConfig() error {
 	_, err := c.clientset.CoreV1().ConfigMaps(c.Name).Apply(
 		context.TODO(),
 		&applycorev1.ConfigMapApplyConfiguration{
@@ -276,12 +276,10 @@ udpIdleTimeout: 250ms
 		metav1.ApplyOptions{
 			FieldManager: "kok",
 		})
-	if err != nil {
-		panic(err.Error())
-	}
+	return err
 }
 
-func (c NameSpace) CreateKubeApiserverConfig() {
+func (c NameSpace) CreateKubeApiserverConfig() error {
 	_, err := c.clientset.CoreV1().ConfigMaps(c.Name).Apply(
 		context.TODO(),
 		&applycorev1.ConfigMapApplyConfiguration{
@@ -361,12 +359,10 @@ rules:
 		metav1.ApplyOptions{
 			FieldManager: "kok",
 		})
-	if err != nil {
-		panic(err.Error())
-	}
+	return err
 }
 
-func (c NameSpace) CreatePVC(name string) {
+func (c NameSpace) CreatePVC(name string) error {
 	//name := "nfs-client"
 	_, err := c.clientset.CoreV1().PersistentVolumeClaims(c.Name).Apply(context.TODO(),
 		&applycorev1.PersistentVolumeClaimApplyConfiguration{
@@ -401,9 +397,7 @@ func (c NameSpace) CreatePVC(name string) {
 			FieldManager: "kok",
 		},
 	)
-	if err != nil {
-		panic(err.Error())
-	}
+	return err
 }
 
 func (c NameSpace) CreateSvc() *string {
@@ -563,19 +557,19 @@ func (c NameSpace) CreateSvc() *string {
 		FieldManager: "kok",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Printf("Create svc error: %s", err.Error())
+		return nil
 	}
-
 	for {
 		svc, err := c.clientset.CoreV1().Services(c.Name).Get(context.TODO(), "control-plane", metav1.GetOptions{})
 		if err != nil {
 			panic(err.Error())
 		}
 		if len(svc.Status.LoadBalancer.Ingress) > 0 {
-			fmt.Printf("Service external IP is: %s\n", svc.Status.LoadBalancer.Ingress[0].IP)
+			log.Printf("Service external IP is: %s\n", svc.Status.LoadBalancer.Ingress[0].IP)
 			return &svc.Status.LoadBalancer.Ingress[0].IP
 		}
-		fmt.Println("Waiting for external IP...")
+		log.Println("Waiting for external IP...")
 		time.Sleep(10 * time.Second)
 	}
 
@@ -737,7 +731,7 @@ func (c NameSpace) CreateDeploy(name, registry, ver string, externalIp *string, 
 											return &a
 										}(),
 										Value: func() *string {
-											a := fmt.Sprintf("http://172.16.0.183:8080/kubeconfig")
+											a := fmt.Sprintf("%s/kubeconfig", viper.GetString("WEBHOOK_URL"))
 											return &a
 										}(),
 									},
@@ -1800,13 +1794,40 @@ func (c NameSpace) CreateDeploy(name, registry, ver string, externalIp *string, 
 }
 
 func (c Kok) DeleteAll(namespace string) {
-	c.clientset.AppsV1().Deployments(namespace).Delete(context.TODO(), "control-plane", metav1.DeleteOptions{})
-	c.clientset.CoreV1().Services(namespace).Delete(context.TODO(), "control-plane", metav1.DeleteOptions{})
-	c.clientset.CoreV1().PersistentVolumeClaims(namespace).Delete(context.TODO(), "control-plane", metav1.DeleteOptions{})
-	c.clientset.CoreV1().ConfigMaps(namespace).Delete(context.TODO(), "kube-proxy", metav1.DeleteOptions{})
-	c.clientset.CoreV1().ConfigMaps(namespace).Delete(context.TODO(), "kubeconfig", metav1.DeleteOptions{})
-	c.clientset.CoreV1().ConfigMaps(namespace).Delete(context.TODO(), "kube-apiserver", metav1.DeleteOptions{})
-	c.clientset.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
+	err := c.clientset.AppsV1().Deployments(namespace).Delete(context.TODO(), "control-plane", metav1.DeleteOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	err = c.clientset.CoreV1().Services(namespace).Delete(context.TODO(), "control-plane", metav1.DeleteOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	err = c.clientset.CoreV1().PersistentVolumeClaims(namespace).Delete(context.TODO(), "control-plane", metav1.DeleteOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	err = c.clientset.CoreV1().ConfigMaps(namespace).Delete(context.TODO(), "kube-proxy", metav1.DeleteOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	err = c.clientset.CoreV1().ConfigMaps(namespace).Delete(context.TODO(), "kubeconfig", metav1.DeleteOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	err = c.clientset.CoreV1().ConfigMaps(namespace).Delete(context.TODO(), "kube-apiserver", metav1.DeleteOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	err = c.clientset.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
 }
 
 func (c Kok) DeletePod(namespace, name string) error {

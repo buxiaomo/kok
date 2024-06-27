@@ -3,10 +3,12 @@ package controllers
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 	"golang.org/x/exp/maps"
 	"kok/pkg/appmarket"
 	"kok/pkg/control"
 	"kok/pkg/version"
+	"log"
 	"net/http"
 	"sort"
 	"time"
@@ -103,11 +105,51 @@ func ClusterCreate(c *gin.Context) {
 	}
 
 	kok := control.New()
-	ns := kok.CreateNS(info.Namespace)
-	ns.CreatePVC("control-plane-vol")
-	ns.CreateKubeApiserverConfig()
-	ns.CreateKubeproxyConfig()
-	ns.CreateKubeconfig()
+	ns, err := kok.CreateNS(info.Namespace)
+	if err != nil {
+		log.Printf("Create ns error: %s", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"cmd": nil,
+			"msg": err.Error(),
+		})
+		return
+	}
+	err = ns.CreatePVC("control-plane-vol")
+	if err != nil {
+		log.Printf("Create pvc error: %s", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"cmd": nil,
+			"msg": err.Error(),
+		})
+		return
+	}
+	err = ns.CreateKubeApiserverConfig()
+	if err != nil {
+		log.Printf("Create configmap error: %s", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"cmd": nil,
+			"msg": err.Error(),
+		})
+		return
+	}
+	err = ns.CreateKubeproxyConfig()
+	if err != nil {
+		log.Printf("Create configmap error: %s", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"cmd": nil,
+			"msg": err.Error(),
+		})
+		return
+	}
+	err = ns.CreateKubeconfig()
+	if err != nil {
+		log.Printf("Create configmap error: %s", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"cmd": nil,
+			"msg": err.Error(),
+		})
+		return
+	}
 	ip := ns.CreateSvc()
 	ns.CreateDeploy("control-plane", info.Registry, info.Version, ip, info.ServiceCidr, info.PodCidr, info.NodePort)
 	go Plugin(info.Namespace, fmt.Sprintf("./kubeconfig/%s.kubeconfig", info.Namespace), info.Network, map[string]map[string]interface{}{
@@ -125,7 +167,8 @@ func ClusterCreate(c *gin.Context) {
 	v := version.GetVersion(info.Version)
 	c.JSON(http.StatusOK, gin.H{
 		"cmd": fmt.Sprintf(
-			"curl -s http://172.16.0.183:8080/install | bash -s kok --master %s --containerd %s --runc %s --kubernetes %s",
+			"curl -s %s/install | bash -s kok --master %s --containerd %s --runc %s --kubernetes %s",
+			viper.GetString("WEBHOOK_URL"),
 			*ip,
 			v["containerd"],
 			v["runc"],
