@@ -36,4 +36,4 @@ helm upgrade -i kok ./kok -n kok --create-namespace \
 ```
 
 Now you can open the link to create the cluster
-* http://<EXTERNAL-IP>:8080/console/cluster
+* http://\<EXTERNAL-IP\>:8080/console/cluster
