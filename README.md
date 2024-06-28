@@ -32,7 +32,7 @@ helm upgrade -i kok ./kok -n kok --create-namespace
 
 # get EXTERNAL-IP and redeploy
 helm upgrade -i kok ./kok -n kok --create-namespace \
---set webhookUrl=http://172.16.200.1:8080 
+--set webhookUrl=http://<EXTERNAL-IP>:8080 
 ```
 
 Now you can open the link to create the cluster
