@@ -1,25 +1,11 @@
 package main
 
 import (
-	"embed"
-	_ "embed"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
+	"kok/pkg/control"
 	"kok/routers"
 )
-
-// go:embed static/*
-// go:embed static/js/*
-// go:embed static/css/*
-// go:embed static/fonts/*
-// go:embed static/images/*
-var static embed.FS
-
-// go:embed templates/*
-var templates embed.FS
-
-// go:embed appmarket/*
-var appmarket embed.FS
 
 func init() {
 	viper.SetDefault("GIN_MODE", "debug")
@@ -30,13 +16,14 @@ func init() {
 	viper.SetDefault("WEBHOOK_URL", "http://127.0.0.1:8080")
 	viper.AutomaticEnv()
 	//db.ConnectDB(viper.GetString("DB_URL"), viper.GetString("DB_TYPE"))
+
+	kok := control.New()
+	if !kok.HasDefaultSC() {
+		panic("cluster not has default storageclass!")
+	}
 }
 
 func test() {
-	//kok := control.New()
-	//if !kok.HasDefaultSC() {
-	//	panic("cluster not has default storageclass!")
-	//}
 
 	//am := appmarket.New()
 	//am.CoreDNS().Install()

@@ -45,5 +45,7 @@ spec:
           env:
             - name: TZ
               value: "Asia/Shanghai"
+            - name: GIN_MODE
+              value: "release"
             - name: WEBHOOK_URL
               value: "{{ .Values.webhookUrl }}"
