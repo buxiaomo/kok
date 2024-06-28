@@ -4,8 +4,12 @@ This project is deploy kubernetes control-plane on k8s.
 
 ## quick start
 
+this project is need [metallb](https://github.com/metallb/metallb), please install it.
+
 ```shell
-kind create cluster --name=kok-demo  --image=docker.m.moby.org.cn/kindest/node:v1.29.4
+mkdir .ssh
+ssh-keygen -t rsa -P "" -f ./.ssh/id_rsa
+vagrant up --provision
 
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.4/config/manifests/metallb-native.yaml
 cat <<EOF | kubectl apply -f -

@@ -17,7 +17,7 @@ spec:
       serviceAccount: kok
       containers:
         - name: kok
-          image: "{{ .Values.hub }}:{{ .Values.tag }}"
+          image: "docker.m.moby.org.cn/{{ .Values.hub }}:{{ .Values.tag }}"
           imagePullPolicy: Always
           ports:
             - name: tcp-8080

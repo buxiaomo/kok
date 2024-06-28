@@ -114,6 +114,27 @@ func ClusterCreate(c *gin.Context) {
 		})
 		return
 	}
+
+	err = ns.CreateSA()
+	if err != nil {
+		log.Printf("Create sa error: %s", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"cmd": nil,
+			"msg": err.Error(),
+		})
+		return
+	}
+
+	err = ns.CreateRBAC()
+	if err != nil {
+		log.Printf("Create rbac error: %s", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"cmd": nil,
+			"msg": err.Error(),
+		})
+		return
+	}
+
 	err = ns.CreatePVC("control-plane-vol")
 	if err != nil {
 		log.Printf("Create pvc error: %s", err.Error())
@@ -123,6 +144,7 @@ func ClusterCreate(c *gin.Context) {
 		})
 		return
 	}
+
 	err = ns.CreateKubeApiserverConfig()
 	if err != nil {
 		log.Printf("Create configmap error: %s", err.Error())
@@ -150,7 +172,19 @@ func ClusterCreate(c *gin.Context) {
 		})
 		return
 	}
+
+	_, err = ns.CreateIngress(viper.GetString("DOMAIN_NAME"))
+	if err != nil {
+		log.Printf("Create ingress error: %s", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"cmd": nil,
+			"msg": err.Error(),
+		})
+		return
+	}
+
 	ip := ns.CreateSvc()
+
 	ns.CreateDeploy("control-plane", info.Registry, info.Version, ip, info.ServiceCidr, info.PodCidr, info.NodePort)
 	go Plugin(info.Namespace, fmt.Sprintf("./kubeconfig/%s.kubeconfig", info.Namespace), info.Network, map[string]map[string]interface{}{
 		"coredns": {

@@ -6,12 +6,15 @@ import (
 	"github.com/spf13/viper"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	applyappsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
 	applycorev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	applymetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
+	applynetworkingv1 "k8s.io/client-go/applyconfigurations/networking/v1"
+	applyrbacv1 "k8s.io/client-go/applyconfigurations/rbac/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -116,11 +119,238 @@ func (c Kok) CreateNS(name string) (namespace NameSpace, err error) {
 	//return ns.Name
 }
 
+func (c NameSpace) CreateSA() error {
+	_, err := c.clientset.CoreV1().ServiceAccounts(c.Name).Apply(context.TODO(), &applycorev1.ServiceAccountApplyConfiguration{
+		TypeMetaApplyConfiguration: applymetav1.TypeMetaApplyConfiguration{
+			Kind: func() *string {
+				name := "ServiceAccount"
+				return &name
+			}(),
+			APIVersion: func() *string {
+				name := "v1"
+				return &name
+			}(),
+		},
+		ObjectMetaApplyConfiguration: &applymetav1.ObjectMetaApplyConfiguration{
+			Name: func() *string {
+				name := "control-plane"
+				return &name
+			}(),
+			Namespace: &c.Name,
+			Labels: map[string]string{
+				"app": "control-plane",
+			},
+		},
+	}, metav1.ApplyOptions{
+		FieldManager: "kok",
+	})
+	return err
+}
+
+func (c NameSpace) CreateRBAC() error {
+	_, err := c.clientset.RbacV1().Roles(c.Name).Apply(context.TODO(), &applyrbacv1.RoleApplyConfiguration{
+		TypeMetaApplyConfiguration: applymetav1.TypeMetaApplyConfiguration{
+			Kind: func() *string {
+				name := "Role"
+				return &name
+			}(),
+			APIVersion: func() *string {
+				name := "rbac.authorization.k8s.io/v1"
+				return &name
+			}(),
+		},
+		ObjectMetaApplyConfiguration: &applymetav1.ObjectMetaApplyConfiguration{
+			Name: func() *string {
+				name := "application:control-plane"
+				return &name
+			}(),
+			Namespace: &c.Name,
+			Labels: map[string]string{
+				"app": "control-plane",
+			},
+		},
+		Rules: []applyrbacv1.PolicyRuleApplyConfiguration{
+			{
+				Verbs: []string{
+					"patch",
+					"get",
+					"create",
+				},
+				APIGroups: []string{""},
+				Resources: []string{
+					"secrets",
+				},
+			},
+		},
+	},
+		metav1.ApplyOptions{
+			FieldManager: "kok",
+		})
+	if err != nil {
+		return err
+	}
+	_, err = c.clientset.RbacV1().RoleBindings(c.Name).Apply(context.TODO(), &applyrbacv1.RoleBindingApplyConfiguration{
+		TypeMetaApplyConfiguration: applymetav1.TypeMetaApplyConfiguration{
+			Kind: func() *string {
+				name := "RoleBinding"
+				return &name
+			}(),
+			APIVersion: func() *string {
+				name := "rbac.authorization.k8s.io/v1"
+				return &name
+			}(),
+		},
+		ObjectMetaApplyConfiguration: &applymetav1.ObjectMetaApplyConfiguration{
+			Name: func() *string {
+				name := "application:control-plane"
+				return &name
+			}(),
+			Namespace: &c.Name,
+			Labels: map[string]string{
+				"app": "control-plane",
+			},
+		},
+		Subjects: []applyrbacv1.SubjectApplyConfiguration{
+			{
+				Kind: func() *string {
+					name := "ServiceAccount"
+					return &name
+				}(),
+				APIGroup: func() *string {
+					name := ""
+					return &name
+				}(),
+				Name: func() *string {
+					name := "control-plane"
+					return &name
+				}(),
+				Namespace: &c.Name,
+			},
+		},
+		RoleRef: &applyrbacv1.RoleRefApplyConfiguration{
+			APIGroup: func() *string {
+				name := "rbac.authorization.k8s.io"
+				return &name
+			}(),
+			Kind: func() *string {
+				name := "Role"
+				return &name
+			}(),
+			Name: func() *string {
+				name := "application:control-plane"
+				return &name
+			}(),
+		},
+	}, metav1.ApplyOptions{
+		FieldManager: "kok",
+	})
+	return err
+}
+
+func (c NameSpace) CreateIngress(dn string) (result *networkingv1.Ingress, err error) {
+	return c.clientset.NetworkingV1().Ingresses(c.Name).Apply(context.TODO(), &applynetworkingv1.IngressApplyConfiguration{
+		TypeMetaApplyConfiguration: applymetav1.TypeMetaApplyConfiguration{
+			Kind: func() *string {
+				name := "Ingress"
+				return &name
+			}(),
+			APIVersion: func() *string {
+				name := "networking.k8s.io/v1"
+				return &name
+			}(),
+		},
+		ObjectMetaApplyConfiguration: &applymetav1.ObjectMetaApplyConfiguration{
+			Labels: map[string]string{
+				"app": "control-plane",
+			},
+			Name: func() *string {
+				name := "control-plane"
+				return &name
+			}(),
+			Namespace: &c.Name,
+		},
+		Spec: &applynetworkingv1.IngressSpecApplyConfiguration{
+			//IngressClassName: nil,
+			//DefaultBackend: &applynetworkingv1.IngressBackendApplyConfiguration{
+			//	Service: &applynetworkingv1.IngressServiceBackendApplyConfiguration{
+			//		Name: func() *string {
+			//			name := "control-plane"
+			//			return &name
+			//		}(),
+			//		Port: &applynetworkingv1.ServiceBackendPortApplyConfiguration{
+			//			Name: func() *string {
+			//				name := "https"
+			//				return &name
+			//			}(),
+			//			Number: func() *int32 {
+			//				name := int32(6443)
+			//				return &name
+			//			}(),
+			//		},
+			//	},
+			//},
+			TLS: []applynetworkingv1.IngressTLSApplyConfiguration{
+				{
+					Hosts: []string{
+						fmt.Sprintf("%s.%s", c.Name, dn),
+					},
+					SecretName: func() *string {
+						name := "control-plane"
+						return &name
+					}(),
+				},
+			},
+			Rules: []applynetworkingv1.IngressRuleApplyConfiguration{
+				{
+					Host: func() *string {
+						name := fmt.Sprintf("%s.%s", c.Name, dn)
+						return &name
+					}(),
+					IngressRuleValueApplyConfiguration: applynetworkingv1.IngressRuleValueApplyConfiguration{
+						HTTP: &applynetworkingv1.HTTPIngressRuleValueApplyConfiguration{
+							Paths: []applynetworkingv1.HTTPIngressPathApplyConfiguration{
+								{
+									Path: func() *string {
+										name := "/"
+										return &name
+									}(),
+									PathType: func() *networkingv1.PathType {
+										name := networkingv1.PathTypePrefix
+										return &name
+									}(),
+									Backend: &applynetworkingv1.IngressBackendApplyConfiguration{
+										Service: &applynetworkingv1.IngressServiceBackendApplyConfiguration{
+											Name: func() *string {
+												name := "control-plane"
+												return &name
+											}(),
+											Port: &applynetworkingv1.ServiceBackendPortApplyConfiguration{
+												Number: func() *int32 {
+													name := int32(6443)
+													return &name
+												}(),
+											},
+										},
+										Resource: nil,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}, metav1.ApplyOptions{
+		FieldManager: "kok",
+	})
+}
+
 func (c Kok) GetInstance() (*corev1.PodList, error) {
 	return c.clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
 		LabelSelector: "app=control-plane",
 	})
 }
+
 func (c NameSpace) CreateKubeconfig() error {
 	_, err := c.clientset.CoreV1().ConfigMaps(c.Name).Apply(
 		context.TODO(),
@@ -555,8 +785,9 @@ func (c NameSpace) CreateSvc() *string {
 				"app": "control-plane",
 			},
 			Type: func() *corev1.ServiceType {
-				x := corev1.ServiceTypeLoadBalancer
-				return &x
+				name := corev1.ServiceTypeLoadBalancer
+				//name := corev1.ServiceTypeClusterIP
+				return &name
 			}(),
 		},
 	}, metav1.ApplyOptions{
@@ -566,6 +797,7 @@ func (c NameSpace) CreateSvc() *string {
 		log.Printf("Create svc error: %s", err.Error())
 		return nil
 	}
+
 	for {
 		svc, err := c.clientset.CoreV1().Services(c.Name).Get(context.TODO(), "control-plane", metav1.GetOptions{})
 		if err != nil {
@@ -583,7 +815,6 @@ func (c NameSpace) CreateSvc() *string {
 }
 
 func (c NameSpace) CreateDeploy(name, registry, ver string, externalIp *string, serviceCidr, podCidr, nodePort string) {
-	fmt.Println(viper.GetString("WEBHOOK_URL"))
 	v := version.GetVersion(ver)
 	_, err := c.clientset.AppsV1().Deployments(c.Name).Apply(
 		context.TODO(),
@@ -634,6 +865,10 @@ func (c NameSpace) CreateDeploy(name, registry, ver string, externalIp *string, 
 						},
 					},
 					Spec: &applycorev1.PodSpecApplyConfiguration{
+						ServiceAccountName: func() *string {
+							name := "control-plane"
+							return &name
+						}(),
 						Volumes: []applycorev1.VolumeApplyConfiguration{
 							{
 								Name: func() *string {
@@ -1827,6 +2062,31 @@ func (c Kok) DeleteAll(namespace string) {
 	}
 
 	err = c.clientset.CoreV1().ConfigMaps(namespace).Delete(context.TODO(), "kube-apiserver", metav1.DeleteOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	err = c.clientset.NetworkingV1().Ingresses(namespace).Delete(context.TODO(), "control-plane", metav1.DeleteOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	err = c.clientset.CoreV1().Secrets(namespace).Delete(context.TODO(), "control-plane", metav1.DeleteOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	err = c.clientset.RbacV1().RoleBindings(namespace).Delete(context.TODO(), "application:control-plane", metav1.DeleteOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	err = c.clientset.RbacV1().Roles(namespace).Delete(context.TODO(), "application:control-plane", metav1.DeleteOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	err = c.clientset.CoreV1().ServiceAccounts(namespace).Delete(context.TODO(), "control-plane", metav1.DeleteOptions{})
 	if err != nil {
 		panic(err.Error())
 	}
