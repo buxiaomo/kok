@@ -56,11 +56,11 @@ func (c flannel) UnInstall() {
 	log.Printf("%s 成功卸载\n", resp.Release.Name)
 }
 
-func (app appMark) Flannel(namespace, name string) flannel {
+func (app appMark) Flannel(namespace, name, version string) flannel {
 	return flannel{
 		Namespace: namespace,
 		Name:      name,
-		chartPath: "./appmarket/flannel-0.25.4.tgz",
+		chartPath: fmt.Sprintf("./appmarket/assets/flannel-%s.tgz", version),
 		cfg:       app.cfg,
 	}
 }

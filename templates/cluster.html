@@ -243,57 +243,71 @@
                                                     <div class="card">
 <!--                                                        <div class="card-header"><h4>水平排列的表单</h4></div>-->
                                                         <div class="card-body">
-
                                                             <form class="form-horizontal" action="/console/cluster" method="post" onsubmit="return false;">
                                                                 <div class="form-group">
-                                                                    <label class="col-md-3 control-label" for="example-hf-email">集群名称</label>
-                                                                    <div class="col-md-7">
-                                                                        <input class="form-control clusterName" type="text" id="example-hf-email" name="example-hf-email" placeholder="请输入名称..">
+                                                                    <label class="col-md-2 control-label" for="example-hf-name">名称</label>
+                                                                    <div class="col-md-4">
+                                                                        <input class="form-control clusterName" type="text" id="example-hf-name" name="example-hf-name" placeholder="请输入名称..">
+                                                                    </div>
+                                                                    <label class="col-md-2 control-label" for="example-hf-env">环境</label>
+                                                                    <div class="col-md-4">
+                                                                        <input class="form-control clusterEnv" type="text" id="example-hf-env" name="example-hf-env" placeholder="请输入环境.." value="noprod">
+                                                                    </div>
+                                                                </div>
+
+                                                                <div class="form-group">
+                                                                    <label class="col-md-2 control-label" for="example-hf-reg">仓库地址</label>
+                                                                    <div class="col-md-10">
+                                                                        <select class="form-control clusterRegistry" id="example-hf-reg" name="example-select" size="1">
+                                                                            <option value="registry.k8s.io">registry.k8s.io</option>
+                                                                            <option value="k8s.m.moby.org.cn">k8s.m.moby.org.cn</option>
+                                                                        </select>
                                                                     </div>
                                                                 </div>
                                                                 <div class="form-group">
-                                                                    <label class="col-md-3 control-label" for="example-hf-reg">仓库地址</label>
-                                                                    <div class="col-md-7">
-                                                                        <input class="form-control clusterRegistry" type="text" id="example-hf-reg" name="example-hf-password" value="k8s.m.moby.org.cn">
-                                                                    </div>
-                                                                </div>
-                                                                <div class="form-group">
-                                                                    <label class="col-md-3 control-label" for="example-select">集群版本</label>
-                                                                    <div class="col-md-7">
+                                                                    <label class="col-md-2 control-label" for="example-select">集群版本</label>
+                                                                    <div class="col-md-10">
                                                                         <select class="form-control clusterVersion" id="example-select" name="example-select" size="1">
                                                                             {{ range .items }}
-                                                                            <option value="{{ . }}">{{ . }}</option>-->
+                                                                            <option value="{{ . }}">{{ . }}</option>
                                                                             {{ end }}
                                                                         </select>
                                                                     </div>
                                                                 </div>
                                                                 <div class="form-group">
-                                                                    <label class="col-md-3 control-label" for="example-hf-svc">Service CIDR</label>
-                                                                    <div class="col-md-7">
+                                                                    <label class="col-md-2 control-label" for="example-hf-svc">Service CIDR</label>
+                                                                    <div class="col-md-10">
                                                                         <input class="form-control clusterRegistry serviceCidr" type="text" id="example-hf-svc" name="example-hf-password" value="10.96.0.0/12">
                                                                     </div>
                                                                 </div>
                                                                 <div class="form-group">
-                                                                    <label class="col-md-3 control-label" for="example-hf-pod">Pod CIDR</label>
-                                                                    <div class="col-md-7">
+                                                                    <label class="col-md-2 control-label" for="example-hf-pod">Pod CIDR</label>
+                                                                    <div class="col-md-10">
                                                                         <input class="form-control clusterRegistry podCidr" type="text" id="example-hf-pod" name="example-hf-password" value="10.244.0.0/16">
                                                                     </div>
                                                                 </div>
                                                                 <div class="form-group">
-                                                                    <label class="col-md-3 control-label" for="example-hf-nodeport">Node Port</label>
-                                                                    <div class="col-md-7">
+                                                                    <label class="col-md-2 control-label" for="example-hf-nodeport">Node Port</label>
+                                                                    <div class="col-md-10">
                                                                         <input class="form-control clusterRegistry nodePort" type="text" id="example-hf-nodeport" name="example-hf-password" value="30000-32767">
                                                                     </div>
                                                                 </div>
                                                                 <div class="form-group">
-                                                                    <label class="col-md-3 control-label" for="example-network">网络插件</label>
-                                                                    <div class="col-md-7">
-                                                                        <select class="form-control network" id="example-network" name="example-select" size="1">
+                                                                    <label class="col-md-2 control-label" for="example-network">网络插件</label>
+                                                                    <div class="col-md-4">
+                                                                        <select class="form-control network" id="example-network" name="example-select" size="1" onchange="getNetworkVersion();">
+                                                                            <option value="none">请选择</option>
                                                                             <option value="flannel">flannel</option>
                                                                             <option value="calico">calico</option>
                                                                             <option value="canal">canal</option>
                                                                             <option value="antrea">antrea</option>
-                                                                            <option value="cilium">cilium</option>
+                                                                            <option value="cilium" disabled>cilium</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <label class="col-md-2 control-label" for="networkVersion">版本</label>
+                                                                    <div class="col-md-4">
+                                                                        <select class="form-control networkversion" id="networkversion" name="example-select" size="1">
+                                                                            <option value="none">请选择</option>
                                                                         </select>
                                                                     </div>
                                                                 </div>
@@ -316,33 +330,34 @@
                                     <table class="table table-bordered">
                                         <thead>
                                         <tr>
-                                            <th>NAMESPACE</th>
-                                            <th>NAME</th>
-                                            <th>VERSION</th>
-                                            <th>StartTime</th>
-                                            <th>STATUS</th>
+                                            <th>名称</th>
+                                            <th>版本</th>
+                                            <th>LoadBalancer</th>
+                                            <th>网络</th>
+                                            <th>状态</th>
                                             <th>操作</th>
                                         </tr>
                                         </thead>
                                         <tbody>
                                         {{ range .instance }}
                                         <tr>
-                                            <td>{{ .Namespace }}</td>
                                             <td>{{ .Name }}</td>
                                             <td>{{ .Version }}</td>
-
-                                            <td>{{ .StartTime }}</td>
+                                            <th>{{ .LoadBalancer }}</th>
+                                            <td>{{ .Network }}</td>
                                             <td>
-                                                {{ if eq .Status "Running" }}
-                                                <span class="label label-success">{{ .Status }}</span>
+                                                {{ if eq .Status "Active" }}
+                                                    kube-apiserver: <span class="label label-success">{{ .Components.Apiserver }}</span><br/>
+                                                    kube-scheduler: <span class="label label-success">{{ .Components.Scheduler }}</span><br/>
+                                                    kube-controller-manager: <span class="label label-success">{{ .Components.controllerManager }}</span>
                                                 {{ else }}
                                                 <span class="label label-warning">{{ .Status }}</span>
                                                 {{end}}
                                             </td>
                                             <td>
                                                 <div class="btn-group">
-                                                    <a class="btn btn-xs btn-default" onclick="ReCluster({{.Namespace}},{{.Name}});" title="重建" data-toggle="tooltip"><i class="mdi mdi-window-close"></i></a>
-                                                    <a class="btn btn-xs btn-default" onclick="DelCluster({{.Namespace}});" title="删除" data-toggle="tooltip"><i class="mdi mdi-delete"></i></a>
+                                                    <a class="btn btn-xs btn-default" onclick="ClusterHA({{.Name}},{{.Name}});" title="高可用" data-toggle="tooltip"><i class="mdi mdi-hexagon-multiple"></i></a>
+                                                    <a class="btn btn-xs btn-default" onclick="DelCluster({{.Name}});" title="删除" data-toggle="tooltip"><i class="mdi mdi-delete"></i></a>
                                                 </div>
                                             </td>
                                         </tr>
@@ -374,6 +389,24 @@
 <script type="text/javascript" src="/static/js/lightyear.js"></script>
 
 <script type="text/javascript">
+    function getNetworkVersion(){
+        $.ajax({
+            type: 'GET',
+            url: '/console/appmarket?name=' + $('.network').val() ,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function(r) {
+                $("#networkversion").empty();
+                for (var i = 0; i < r.data.length; i++){
+                    $('#networkversion').append($('<option>', {
+                        value: r.data[i].version,
+                        text: r.data[i].version + " ("+r.data[i].description +")"
+                    }));
+                }
+            },
+            // dataType: dataType
+        });
+    }
     function getFirstIp(cidr) {
         const [ip, subnet] = cidr.split('/');
         const subnetMask = 32 - parseInt(subnet, 10);
@@ -402,6 +435,7 @@
             $('#search-btn').html($(this).text() + ' <span class="caret"></span>');
         });
     });
+
     function DelCluster(name){
         $.ajax({
             type: 'DELETE',
@@ -423,16 +457,21 @@
             },
         });
     }
-    function ReCluster(namespace, name) {
+
+    function ClusterHA(namespace) {
         $.ajax({
             type: 'PUT',
-            url: '/console/cluster?namespace=' + namespace + "&name=" + name,
+            url: '/console/ha?name=' + namespace,
             contentType: "application/json; charset=utf-8",
-            dataType: "json",
             success: function(data) {
                 console.log(data);
                 if(data.msg == null ){
-                    window.location.reload();
+                    lightyear.loading('show');
+                    setTimeout(function() {
+                        lightyear.loading('hide');
+                        lightyear.notify('扩容成功，页面即将自动跳转~', 'success', 100000);
+                        window.location.reload();
+                    }, 1e3)
                 }else{
                     alert(data.msg);
                 }
@@ -442,14 +481,16 @@
     $('.addCluster').on('click', function () {
         svc = $('.serviceCidr').val();
         data = JSON.stringify({
-            "namespace": $('.clusterName').val(),
+            "project": $('.clusterName').val(),
+            "env": $('.clusterEnv').val(),
             "registry": $('.clusterRegistry').val(),
             "version": $('.clusterVersion').val(),
             "serviceCidr": svc,
             "podCidr": $('.podCidr').val(),
             "dnsSvc": getFirstIp(svc),
             "nodePort":$('.nodePort').val(),
-            "network": $('.network').val()
+            "network": $('.network').val(),
+            "networkVersion":$('.networkversion').val()
         })
         // console.log(data);
         $.ajax({

@@ -2,36 +2,26 @@
 
 This project is deploy kubernetes control-plane on k8s.
 
-## quick start
+## Depend-on
 
-this project is need [metallb](https://github.com/metallb/metallb), please install it.
+### LoadBalancer
+
+Will be used to expose the kube-apiserver service and communicate with apiserver through this IP when adding nodes.
+
+* [metallb](https://github.com/metallb/metallb)
+
+### StorageClass
+
+Will be used to store individual cluster etcd data and certificate files.
+
+* [nfs-subdir-external-provisioner](https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner)
+  > `kubectl patch storageclass nfs-client -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'`
+
+## Quick start
+
+You need a kubernetes cluster first, then deploy this project on this kubernetes.
 
 ```shell
-mkdir .ssh
-ssh-keygen -t rsa -P "" -f ./.ssh/id_rsa
-vagrant up --provision
-
-kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.4/config/manifests/metallb-native.yaml
-cat <<EOF | kubectl apply -f -
-apiVersion: metallb.io/v1beta1
-kind: IPAddressPool
-metadata:
-  name: address-pool
-  namespace: metallb-system
-spec:
-  addresses:
-  - 172.16.200.1-172.16.200.10
----
-apiVersion: metallb.io/v1beta1
-kind: L2Advertisement
-metadata:
-  name: example
-  namespace: metallb-system
-spec:
-  ipAddressPools:
-  - address-pool
-EOF
-
 helm upgrade -i kok ./kok -n kok --create-namespace
 
 # get EXTERNAL-IP and redeploy

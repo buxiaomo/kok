@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/kube"
+	"helm.sh/helm/v3/pkg/repo"
 	"os"
 )
 
 type appMark struct {
-	cfg *action.Configuration
+	kubeconfig string
+	cfg        *action.Configuration
 }
 
 func New(kubeconfig string) *appMark {
@@ -21,4 +23,35 @@ func New(kubeconfig string) *appMark {
 	return &appMark{
 		cfg: actionConfig,
 	}
+}
+
+type chart struct {
+	cfg *action.Configuration
+}
+
+func (app appMark) Chart() chart {
+	return chart{
+		app.cfg,
+	}
+}
+
+type Chart struct {
+	Name        string `json:"name"`
+	Version     string `json:"version"`
+	Description string `json:"description"`
+}
+
+func (app chart) Search(name string) (chats []Chart) {
+	indexFile, err := repo.LoadIndexFile("./appmarket/assets/index.yaml")
+	if err != nil {
+		panic(err.Error())
+	}
+	for _, entry := range indexFile.Entries[name] {
+		chats = append(chats, Chart{
+			Name:        entry.Name,
+			Version:     entry.AppVersion,
+			Description: entry.Description,
+		})
+	}
+	return chats
 }

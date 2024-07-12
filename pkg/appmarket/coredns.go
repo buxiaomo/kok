@@ -61,7 +61,7 @@ func (app appMark) CoreDNS(namespace, name string) coreDNS {
 	return coreDNS{
 		Namespace: namespace,
 		Name:      name,
-		chartPath: "./appmarket/coredns-1.9.4.tgz",
+		chartPath: "./appmarket/assets/coredns-1.9.4.tgz",
 		cfg:       app.cfg,
 	}
 }

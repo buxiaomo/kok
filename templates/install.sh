@@ -1,40 +1,35 @@
 #!/bin/bash
 #set -x
 # apt-get install iptables ipvsadm ipset -y
-command -v iptables >/dev/null
-if [ $? -ne 0 ]; then
-  echo "please install iptables."
+command_exists() {
+	command -v "$@" > /dev/null 2>&1
+}
+
+if ! command_exists iptables; then
+  cat >&2 <<-'EOF'
+Error: Kubernetes worker node needs this command ,please install 'iptables' first and try again.
+EOF
   exit 1
 fi
 
-command -v ipvsadm >/dev/null
-if [ $? -ne 0 ]; then
-  echo "please install ipvsadm."
+if ! command_exists ipvsadm; then
+  cat >&2 <<-'EOF'
+Error: Kubernetes worker node needs this command ,please install 'ipvsadm' first and try again.
+EOF
   exit 1
 fi
 
-command -v ipset >/dev/null
-if [ $? -ne 0 ]; then
-  echo "please install ipset."
+if ! command_exists ipset; then
+  cat >&2 <<-'EOF'
+Error: Kubernetes worker node needs this command ,please install 'ipset' first and try again.
+EOF
   exit 1
 fi
 
 while [ $# -gt 0 ]; do
   case "$1" in
-  --master)
-    MASTER_ADDRESS="$2"
-    shift
-    ;;
-  --containerd)
-    CONTAINERD_VERSION="$2"
-    shift
-    ;;
-  --kubernetes)
-    KUBE_VERSION="$2"
-    shift
-    ;;
-  --runc)
-    RUNC_VERSION="$2"
+  --name)
+    export NAME="$2"
     shift
     ;;
   --*)
@@ -44,23 +39,28 @@ while [ $# -gt 0 ]; do
   shift $(($# > 0 ? 1 : 0))
 done
 
-command -v firewalld >/dev/null
-if [ $? -ne 0 ]; then
+
+
+
+if command_exists firewalld; then
+  echo "-> Close Firewalld."
   systemctl stop firewalld.service
   systemctl disable firewalld.service
 fi
 
-command -v ufw >/dev/null
-if [ $? -ne 0 ]; then
+if command_exists ufw; then
+  echo "-> Close ufw."
   systemctl stop ufw.service
   systemctl disable ufw.service
 fi
 
-set -e
+#set -e
 if [ -f /etc/selinux/config ]; then
+  echo "-> Close SELinux."
   sed -i "s/^SELINUX=.*/SELINUX=disabled/g" /etc/selinux/config
 fi
 
+echo "-> Setup sysctl."
 cat >/etc/modules-load.d/99-kubernetes.conf <<EOF
 br_netfilter
 nf_conntrack
@@ -121,18 +121,27 @@ vm.overcommit_memory=1
 vm.panic_on_oom=0
 vm.swappiness=0
 EOF
-sysctl --system >/dev/null
+sysctl --system > /dev/null 2>&1
+echo "-> Close swap."
 swapoff -a
 
-containerd() {
-  RUNC_VERSION=$1
-  CONTAINERD_VERSION=$2
-  mkdir -p /etc/containerd
-  wget https://github.com/opencontainers/runc/releases/download/v${RUNC_VERSION}/runc.amd64 -O /usr/local/bin/runc
-  chmod +x /usr/local/bin/runc
-  wget https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz -O /usr/local/src/containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz
-  tar -zxf /usr/local/src/containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz --strip-components=1 -C /usr/local/bin
-  cat >/etc/containerd/config.toml <<EOF
+echo "-> Install CNI."
+# Install CNI
+mkdir -p /opt/cni/bin
+wget https://github.com/containernetworking/plugins/releases/download/v1.5.1/cni-plugins-linux-amd64-v1.5.1.tgz -O /usr/local/src/cni-plugins-linux-amd64-v1.5.1.tgz
+tar -zxf /usr/local/src/cni-plugins-linux-amd64-v1.5.1.tgz --exclude LICENSE --exclude README.md -C /opt/cni/bin
+
+echo "-> Install CNI."
+# Install runc
+wget https://github.com/opencontainers/runc/releases/download/v{{ .Runc }}/runc.amd64 -O /usr/local/bin/runc
+chmod +x /usr/local/bin/runc
+
+echo "-> Install Containerd."
+# Install containerd
+mkdir -p /etc/containerd
+wget https://github.com/containerd/containerd/releases/download/v{{ .Containerd }}/containerd-{{ .Containerd }}-linux-amd64.tar.gz -O /usr/local/src/containerd-{{ .Containerd }}-linux-amd64.tar.gz
+tar -zxf /usr/local/src/containerd-{{ .Containerd }}-linux-amd64.tar.gz --strip-components=1 -C /usr/local/bin
+cat >/etc/containerd/config.toml <<EOF
 version = 2
 root = "/data/containerd"
 state = "/run/containerd"
@@ -200,7 +209,7 @@ required_plugins = []
    max_container_log_line_size = 16384
    netns_mounts_under_state_dir = false
    restrict_oom_score_adj = false
-   sandbox_image = "registry.k8s.io/pause:3.9"
+   sandbox_image = "{{ .Registry }}/pause:{{ .Pause }}"
    selinux_category_range = 1024
    stats_collect_period = 10
    stream_idle_timeout = "4h0m0s"
@@ -437,7 +446,7 @@ required_plugins = []
  uid = 0
 EOF
 
-  cat >/etc/systemd/system/containerd.service <<EOF
+cat >/etc/systemd/system/containerd.service <<EOF
 # Copyright The containerd Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -483,28 +492,26 @@ OOMScoreAdjust=-999
 [Install]
 WantedBy=multi-user.target
 EOF
-  systemctl daemon-reload
-  systemctl restart containerd.service
-  systemctl enable containerd.service
-}
 
-mkdir -p /opt/cni/bin
-wget https://github.com/containernetworking/plugins/releases/download/v1.5.1/cni-plugins-linux-amd64-v1.5.1.tgz -O /usr/local/src/cni-plugins-linux-amd64-v1.5.1.tgz
-tar -zxf /usr/local/src/cni-plugins-linux-amd64-v1.5.1.tgz --exclude LICENSE --exclude README.md -C /opt/cni/bin
-
-containerd ${RUNC_VERSION} ${CONTAINERD_VERSION}
-
-# kubelet
+# Install kubelet
+echo "-> Install kubelet."
 mkdir -p /var/lib/kubelet /etc/kubernetes/pki /etc/kubernetes/manifests
-wget https://dl.k8s.io/${KUBE_VERSION}/bin/linux/amd64/kubelet -O /usr/local/bin/kubelet
+wget https://dl.k8s.io/{{ .Kubernetes }}/bin/linux/amd64/kubelet -O /usr/local/bin/kubelet
 chmod +x /usr/local/bin/kubelet
-wget http://${MASTER_ADDRESS}/ca.crt -O /etc/kubernetes/pki/ca.crt
-wget http://${MASTER_ADDRESS}/ca.key -O /etc/kubernetes/pki/ca.key
+curl --location -g --request GET "{{ .Pkiurl }}/v1/pki/project/{{ .Project }}/{{ .Env }}/ca.crt" -o /etc/kubernetes/pki/ca.crt
+curl --location -g --request GET "{{ .Pkiurl }}/v1/pki/project/{{ .Project }}/{{ .Env }}/ca.key" -o /etc/kubernetes/pki/ca.key
 if [ -f /run/systemd/resolve/resolv.conf ]; then
   RESOLVCONF="/run/systemd/resolve/resolv.conf"
 else
   RESOLVCONF="/etc/resolv.conf"
 fi
+pushd /etc/kubernetes/pki
+openssl genrsa -out kubelet.key 2048
+openssl req -new -key kubelet.key -subj "/CN=system:node:$(hostname -f)/O=system:nodes" -out kubelet.csr
+openssl x509 -req -in kubelet.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days 10000 -out kubelet.crt \
+-extfile <(printf "keyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=clientAuth\nsubjectAltName=DNS:$(hostname -f),IP:$(hostname -I | awk '{print $1}')")
+popd
+
 cat >/var/lib/kubelet/config.yaml <<EOF
 address: "0.0.0.0"
 healthzBindAddress: 0.0.0.0
@@ -525,7 +532,7 @@ authorization:
 cgroupDriver: systemd
 cgroupsPerQOS: true
 clusterDNS:
-- 10.96.0.2
+- {{ .ClusterDNS }}
 clusterDomain: cluster.local
 configMapAndSecretChangeDetectionStrategy: Watch
 containerLogMaxFiles: 5
@@ -620,7 +627,7 @@ apiVersion: v1
 clusters:
   - cluster:
       certificate-authority: /etc/kubernetes/pki/ca.crt
-      server: https://${MASTER_ADDRESS}:6443
+      server: https://{{ .LoadBalancer }}:6443
     name: kubernetes
 contexts:
   - context:
@@ -636,11 +643,6 @@ users:
       client-certificate: /etc/kubernetes/pki/kubelet.crt
       client-key: /etc/kubernetes/pki/kubelet.key
 EOF
-cd /etc/kubernetes/pki
-openssl genrsa -out kubelet.key 2048
-openssl req -new -key kubelet.key -subj "/CN=system:node:$(hostname -f)/O=system:nodes" -out kubelet.csr
-openssl x509 -req -in kubelet.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days 10000 -out kubelet.crt \
-  -extfile <(printf "keyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=clientAuth\nsubjectAltName=DNS:$(hostname -f),IP:$(hostname -I | awk '{print $1}')")
 
 cat >/etc/systemd/system/kubelet.service <<EOF
 [Unit]
@@ -653,7 +655,7 @@ Slice=podruntime.slice
 ExecStart=/usr/local/bin/kubelet \\
  --kubeconfig=/etc/kubernetes/kubelet.kubeconfig \\
  --config=/var/lib/kubelet/config.yaml \\
- --pod-infra-container-image=registry.k8s.io/pause:3.9 \\
+ --pod-infra-container-image="{{ .Registry }}/pause:{{ .Pause }}" \\
  --runtime-request-timeout=15m \\
  --container-runtime-endpoint=unix:///run/containerd/containerd.sock \\
  --container-runtime=remote \\
@@ -670,13 +672,16 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload
-systemctl restart kubelet.service
-systemctl enable kubelet.service
-
-# kube-proxy
-wget https://dl.k8s.io/${KUBE_VERSION}/bin/linux/amd64/kube-proxy -O /usr/local/bin/kube-proxy
+# Install kube-proxy
+echo "-> Install kube-proxy."
+wget https://dl.k8s.io/{{ .Kubernetes }}/bin/linux/amd64/kube-proxy -O /usr/local/bin/kube-proxy
 chmod +x /usr/local/bin/kube-proxy
+pushd /etc/kubernetes/pki
+openssl genrsa -out kube-proxy.key 2048
+openssl req -new -key kube-proxy.key -subj "/CN=system:kube-proxy/O=system:node-proxier" -out kube-proxy.csr
+openssl x509 -req -in kube-proxy.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days 10000 -out kube-proxy.crt \
+-extfile <(printf "keyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=clientAuth\nsubjectAltName=DNS:$(hostname -f),IP:$(hostname -I | awk '{print $1}')")
+popd
 cat >/etc/systemd/system/kube-proxy.service <<EOF
 [Unit]
 Description=Kubernetes Kube Proxy
@@ -709,7 +714,7 @@ clientConnection:
   contentType: application/vnd.kubernetes.protobuf
   kubeconfig: /etc/kubernetes/kube-proxy.kubeconfig
   qps: 5
-clusterCIDR: "10.96.0.0/12"
+clusterCIDR: "{{ .ServiceSubnet }}"
 configSyncPeriod: 15m0s
 conntrack:
   max: null
@@ -742,7 +747,7 @@ apiVersion: v1
 clusters:
   - cluster:
       certificate-authority: /etc/kubernetes/pki/ca.crt
-      server: https://${MASTER_ADDRESS}:6443
+      server: https://{{ .LoadBalancer }}:6443
     name: kubernetes
 contexts:
   - context:
@@ -758,14 +763,7 @@ users:
       client-certificate: /etc/kubernetes/pki/kube-proxy.crt
       client-key: /etc/kubernetes/pki/kube-proxy.key
 EOF
-cd /etc/kubernetes/pki
-openssl genrsa -out kube-proxy.key 2048
-openssl req -new -key kube-proxy.key -subj "/CN=system:kube-proxy/O=system:node-proxier" -out kube-proxy.csr
-# openssl x509 -req -in kube-proxy.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days 10000 -extensions v3_req_client -extfile openssl.cnf -out kube-proxy.crt
-openssl x509 -req -in kube-proxy.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days 10000 -out kube-proxy.crt \
-  -extfile <(printf "keyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=clientAuth\nsubjectAltName=DNS:$(hostname -f),IP:$(hostname -I | awk '{print $1}')")
+echo "-> Start service, please run 'kubectl get no' command on master check the node status."
 systemctl daemon-reload
-systemctl restart kube-proxy.service
-systemctl enable kube-proxy.service
-
-find . -name "*.csr" -o -name "*.srl" | xargs rm -f
+systemctl restart kube-proxy.service kubelet.service  containerd.service
+systemctl enable kube-proxy.service kubelet.service  containerd.service

@@ -1,0 +1,279 @@
+apiVersion: v1
+entries:
+  antrea:
+  - apiVersion: v2
+    appVersion: 2.0.1
+    created: "2024-07-01T12:43:39.79121+08:00"
+    description: support kubernetes v1.27-v1.30
+    digest: c06bb0d593b46b0352a6bfb198613c3c7d0b349a1ede922cd2af6115e0c93ad3
+    name: antrea
+    type: application
+    urls:
+    - antrea-2.0.1.tgz
+    version: 2.0.1
+  - apiVersion: v2
+    appVersion: 2.0.0
+    created: "2024-07-01T12:43:39.78504+08:00"
+    description: support kubernetes v1.26
+    digest: f50f33566381d5c8f30a71a9b7f104d8ce805614d626bdfd8908f68f69f93b09
+    name: antrea
+    type: application
+    urls:
+    - antrea-2.0.0.tgz
+    version: 2.0.0
+  calico:
+  - apiVersion: v2
+    appVersion: 3.28.0
+    created: "2024-07-01T12:43:39.824247+08:00"
+    description: support kubernetes v1.27-v1.30
+    digest: b4845430be098c868634c8c9eb2ee52cdeec85f7be3f92ba00145370fcec5c2c
+    name: calico
+    type: application
+    urls:
+    - calico-3.28.0.tgz
+    version: 3.28.0
+  - apiVersion: v2
+    appVersion: 3.26.4
+    created: "2024-07-01T12:43:39.820992+08:00"
+    description: support kubernetes v1.24-v1.26
+    digest: d5b26f336eb2c56a74da66fb6c84fd09fea79e4d5e8bf82373ebc613c9f2479a
+    name: calico
+    type: application
+    urls:
+    - calico-3.26.4.tgz
+    version: 3.26.4
+  - apiVersion: v2
+    appVersion: 3.25.0
+    created: "2024-07-01T12:43:39.817961+08:00"
+    description: support kubernetes v1.22-v1.23
+    digest: bf50a40bd4884eabe8f3b7ef3f6b3d59d3539faa16ac3239c1aab4291dca1418
+    name: calico
+    type: application
+    urls:
+    - calico-3.25.0.tgz
+    version: 3.25.0
+  - apiVersion: v2
+    appVersion: 3.23.4
+    created: "2024-07-01T12:43:39.813434+08:00"
+    description: support kubernetes v1.21
+    digest: 88077771929382e62e1b88a1764e1213911e663f829c56bcf61293b538f5e1fe
+    name: calico
+    type: application
+    urls:
+    - calico-3.23.4.tgz
+    version: 3.23.4
+  - apiVersion: v2
+    appVersion: 3.21.6
+    created: "2024-07-01T12:43:39.809346+08:00"
+    description: support kubernetes v1.20
+    digest: 370ff0714b9f52e91c2b78fe55da6e2846dbed0846ccb5e59b37dd51a70902e9
+    name: calico
+    type: application
+    urls:
+    - calico-3.21.6.tgz
+    version: 3.21.6
+  - apiVersion: v2
+    appVersion: 3.20.6
+    created: "2024-07-01T12:43:39.806347+08:00"
+    description: support kubernetes v1.19
+    digest: 4b0ed79361b2efa484a63246a5a21348034454af5d874d11bfdffc4fcf9f1cc7
+    name: calico
+    type: application
+    urls:
+    - calico-3.20.6.tgz
+    version: 3.20.6
+  - apiVersion: v2
+    appVersion: 3.18.6
+    created: "2024-07-01T12:43:39.803696+08:00"
+    description: support kubernetes v1.18
+    digest: e9d6f45c72e1e0808165f593e894f172bfde22d4fb9bb1b9b76ff257ad6beb6a
+    name: calico
+    type: application
+    urls:
+    - calico-3.18.6.tgz
+    version: 3.18.6
+  - apiVersion: v2
+    appVersion: 3.17.6
+    created: "2024-07-01T12:43:39.800735+08:00"
+    description: support kubernetes v1.17
+    digest: 50d7b84f178ad23b00a8aa5b31c8bbcb4293fa9971474a817aa6609361b89478
+    name: calico
+    type: application
+    urls:
+    - calico-3.17.6.tgz
+    version: 3.17.6
+  - apiVersion: v2
+    appVersion: 3.16.10
+    created: "2024-07-01T12:43:39.798033+08:00"
+    description: support kubernetes v1.16
+    digest: 2852d5f8f7df9b85097d1c1bd87f42a41d0b7c8ba9a14aa8f0ea5db7fb85f8f4
+    name: calico
+    type: application
+    urls:
+    - calico-3.16.10.tgz
+    version: 3.16.10
+  - apiVersion: v2
+    appVersion: 3.13.5
+    created: "2024-07-01T12:43:39.79487+08:00"
+    description: support kubernetes v1.15
+    digest: 623b292f087ce76887bea71f7b80a9ca866dc6e2ba356d6af261967cee38c99b
+    name: calico
+    type: application
+    urls:
+    - calico-3.13.5.tgz
+    version: 3.13.5
+  - apiVersion: v2
+    appVersion: 3.12.3
+    created: "2024-07-01T12:43:39.792958+08:00"
+    description: support kubernetes v1.14
+    digest: ba350dd20ff8e581b937875e8afc6a3f71b41d5e487c99a5eeb2ea81e93ef86a
+    name: calico
+    type: application
+    urls:
+    - calico-3.12.3.tgz
+    version: 3.12.3
+  canal:
+  - apiVersion: v2
+    appVersion: 3.28.0
+    created: "2024-07-01T12:43:39.856857+08:00"
+    description: support kubernetes v1.27-v1.30
+    digest: 7cf3a729a9d935ffe1726d931fb33b8706a04fc83cc59db5ecbab75326774659
+    name: canal
+    type: application
+    urls:
+    - canal-3.28.0.tgz
+    version: 3.28.0
+  - apiVersion: v2
+    appVersion: 3.26.4
+    created: "2024-07-01T12:43:39.853443+08:00"
+    description: support kubernetes v1.24-v1.26
+    digest: 457d5dc4de9517bfaf18fa1eb90595ab592ddd24236fde1e14e7c67b2a09eb50
+    name: canal
+    type: application
+    urls:
+    - canal-3.26.4.tgz
+    version: 3.26.4
+  - apiVersion: v2
+    appVersion: 3.25.0
+    created: "2024-07-01T12:43:39.850183+08:00"
+    description: support kubernetes v1.22-v1.23
+    digest: a4b897dab54c2a0a1e306f3fdf522039aa97ef64648cad701f3ac363c657f4ef
+    name: canal
+    type: application
+    urls:
+    - canal-3.25.0.tgz
+    version: 3.25.0
+  - apiVersion: v2
+    appVersion: 3.23.4
+    created: "2024-07-01T12:43:39.84608+08:00"
+    description: support kubernetes v1.21
+    digest: 0c0ad465c641fffb3c2daaf8890f8849c3b0c6f0ece0677a648c74c163187fc3
+    name: canal
+    type: application
+    urls:
+    - canal-3.23.4.tgz
+    version: 3.23.4
+  - apiVersion: v2
+    appVersion: 3.21.6
+    created: "2024-07-01T12:43:39.842247+08:00"
+    description: support kubernetes v1.20
+    digest: 95c9e5ea8405b0ed8e8fc06a02fdfe20f0a15880bdb357a8861b3afc0d037529
+    name: canal
+    type: application
+    urls:
+    - canal-3.21.6.tgz
+    version: 3.21.6
+  - apiVersion: v2
+    appVersion: 3.20.6
+    created: "2024-07-01T12:43:39.839334+08:00"
+    description: support kubernetes v1.19
+    digest: ff9e8d496d8b3aacc4454ea634dea70d5c548fa7a0a5ee5d0173d0c352368a41
+    name: canal
+    type: application
+    urls:
+    - canal-3.20.6.tgz
+    version: 3.20.6
+  - apiVersion: v2
+    appVersion: 3.18.6
+    created: "2024-07-01T12:43:39.835561+08:00"
+    description: support kubernetes v1.18
+    digest: abb44a1ebc4cf3c5fc8d801c05ba035f3d064967f93711af931b89803db5c4bc
+    name: canal
+    type: application
+    urls:
+    - canal-3.18.6.tgz
+    version: 3.18.6
+  - apiVersion: v2
+    appVersion: 3.17.6
+    created: "2024-07-01T12:43:39.832261+08:00"
+    description: support kubernetes v1.17
+    digest: 449588d2b8a477856bb0a3af03aa6c38cf5be9d3a2c771f1e1d351c24b5b9890
+    name: canal
+    type: application
+    urls:
+    - canal-3.17.6.tgz
+    version: 3.17.6
+  - apiVersion: v2
+    appVersion: 3.16.10
+    created: "2024-07-01T12:43:39.828979+08:00"
+    description: support kubernetes v1.16
+    digest: 728b5e18fe0ac89b22342e2ea131dce3c94a7abc3dc54a6d98e013316c874214
+    name: canal
+    type: application
+    urls:
+    - canal-3.16.10.tgz
+    version: 3.16.10
+  - apiVersion: v2
+    appVersion: 3.13.5
+    created: "2024-07-01T12:43:39.82662+08:00"
+    description: support kubernetes v1.15
+    digest: 0c5b51c6aac21a1bc9be5239f2096c9bd0a91763761c8c11fc45a353b4e9412a
+    name: canal
+    type: application
+    urls:
+    - canal-3.13.5.tgz
+    version: 3.13.5
+  - apiVersion: v2
+    appVersion: 3.12.3
+    created: "2024-07-01T12:43:39.825523+08:00"
+    description: support kubernetes v1.14
+    digest: b8184c8e423fb9953cee1deb6d4d343c473427db574523ae322376a8a69861b2
+    name: canal
+    type: application
+    urls:
+    - canal-3.12.3.tgz
+    version: 3.12.3
+  coredns:
+  - apiVersion: v2
+    appVersion: 1.9.4
+    created: "2024-07-01T12:43:39.857664+08:00"
+    description: A Helm chart for Kubernetes
+    digest: 769856d5a053a5682851ff417dc51457885159f427fec3fdd20f84f349366db0
+    name: coredns
+    type: application
+    urls:
+    - coredns-1.9.4.tgz
+    version: 1.9.4
+  flannel:
+  - apiVersion: v2
+    appVersion: 0.25.4
+    created: "2024-07-01T12:43:39.858083+08:00"
+    description: A Helm chart for Kubernetes
+    digest: 7e73c3fd1b3f30ebe5f78df8953fb3da07ee2d2502f1b21a61f5e2db15c1f58a
+    name: flannel
+    type: application
+    urls:
+    - flannel-0.25.4.tgz
+    version: 0.25.4
+  metrics-server:
+  - apiVersion: v2
+    appVersion: 0.7.1
+    created: "2024-07-01T12:43:39.858504+08:00"
+    description: A Helm chart for Kubernetes
+    digest: 7f66eb4afa84cfff5bb21745dcbd9917b6e9b57fe64d8b9a0c0b676eda465ccf
+    name: metrics-server
+    type: application
+    urls:
+    - metrics-server-0.7.1.tgz
+    version: 0.7.1
+generated: "2024-07-01T12:43:39.776856+08:00"

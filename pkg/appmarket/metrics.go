@@ -60,7 +60,7 @@ func (app appMark) MetricsServer(namespace, name string) metricsServer {
 	return metricsServer{
 		Namespace: namespace,
 		Name:      name,
-		chartPath: "./appmarket/metrics-server-0.7.1.tgz",
+		chartPath: "./appmarket/assets/metrics-server-0.7.1.tgz",
 		cfg:       app.cfg,
 	}
 }
