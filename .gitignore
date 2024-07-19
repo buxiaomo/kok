@@ -1,0 +1,10 @@
+# OSX files
+.DS_Store
+.idea
+__pycache__
+main
+kubeconfig/*
+.ssh
+.vagrant
+!appmarket/assets/.gitignore
+appmarket/assets/*
