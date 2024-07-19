@@ -60,7 +60,7 @@ func (app appMark) Canal(namespace, name, version string) canal {
 	return canal{
 		Namespace: namespace,
 		Name:      name,
-		chartPath: fmt.Sprintf("./appmarket/assets/canal-%s.tgz", version),
+		chartPath: fmt.Sprintf("./appmarket/assets/canal/canal-%s.tgz", version),
 		cfg:       app.cfg,
 	}
 }

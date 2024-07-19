@@ -1,6 +1,7 @@
 package routers
 
 import (
+	"encoding/base64"
 	"fmt"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
@@ -85,14 +86,15 @@ func SetupRouter() *gin.Engine {
 		}
 		//fmt.Println(string(fileContent))
 
-		//// Decode base64 content
-		//decodedContent, err := base64.StdEncoding.DecodeString(string(fileContent))
-		//if err != nil {
-		//	c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to decode base64: %s", err.Error()))
-		//	return
-		//}
+		// Decode base64 content
+		decodedContent, err := base64.StdEncoding.DecodeString(string(fileContent))
+		if err != nil {
+			c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to decode base64: %s", err.Error()))
+			return
+		}
 
-		err = ioutil.WriteFile(fmt.Sprintf("./kubeconfig/%s.kubeconfig", name), fileContent, 0666)
+		err = ioutil.WriteFile(fmt.Sprintf("./kubeconfig/%s.kubeconfig", name), decodedContent, 0666)
+		//err = ioutil.WriteFile(fmt.Sprintf("./kubeconfig/%s.kubeconfig", name), fileContent, 0666)
 		if err != nil {
 			log.Printf("Failed to save file: %v", err)
 			c.String(http.StatusInternalServerError, "Failed to save file")
@@ -110,6 +112,7 @@ func SetupRouter() *gin.Engine {
 		})
 		private.PUT("/ha", controllers.ClusterEnableHA)
 		private.GET("/cluster", controllers.ClusterPages)
+		private.GET("/cluster/status", controllers.ClusterStatus)
 		private.POST("/cluster", controllers.ClusterCreate)
 		private.DELETE("/cluster", controllers.ClusterDelete)
 		//private.PATCH("/cluster", controllers.ClusterReDeploy)

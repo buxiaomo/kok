@@ -60,7 +60,7 @@ func (app appMark) Antrea(namespace, name, version string) antrea {
 	return antrea{
 		Namespace: namespace,
 		Name:      name,
-		chartPath: fmt.Sprintf("./appmarket/assets/antrea-%s.tgz", version),
+		chartPath: fmt.Sprintf("./appmarket/assets/antrea/antrea-%s.tgz", version),
 		cfg:       app.cfg,
 	}
 }

@@ -498,8 +498,12 @@ echo "-> Install kubelet."
 mkdir -p /var/lib/kubelet /etc/kubernetes/pki /etc/kubernetes/manifests
 wget https://dl.k8s.io/{{ .Kubernetes }}/bin/linux/amd64/kubelet -O /usr/local/bin/kubelet
 chmod +x /usr/local/bin/kubelet
-curl --location -g --request GET "{{ .Pkiurl }}/v1/pki/project/{{ .Project }}/{{ .Env }}/ca.crt" -o /etc/kubernetes/pki/ca.crt
-curl --location -g --request GET "{{ .Pkiurl }}/v1/pki/project/{{ .Project }}/{{ .Env }}/ca.key" -o /etc/kubernetes/pki/ca.key
+cat >/etc/kubernetes/pki/ca.crt <<EOF
+{{ .Ca }}EOF
+
+cat >/etc/kubernetes/pki/ca.key <<EOF
+{{ .Key }}EOF
+
 if [ -f /run/systemd/resolve/resolv.conf ]; then
   RESOLVCONF="/run/systemd/resolve/resolv.conf"
 else

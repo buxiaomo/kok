@@ -56,11 +56,11 @@ func (c metricsServer) UnInstall() {
 	log.Printf("%s 成功卸载\n", resp.Release.Name)
 }
 
-func (app appMark) MetricsServer(namespace, name string) metricsServer {
+func (app appMark) MetricsServer(namespace, name, version string) metricsServer {
 	return metricsServer{
 		Namespace: namespace,
 		Name:      name,
-		chartPath: "./appmarket/assets/metrics-server-0.7.1.tgz",
+		chartPath: fmt.Sprintf("./appmarket/assets/metrics-server/metrics-server-%s.tgz", version),
 		cfg:       app.cfg,
 	}
 }

@@ -59,11 +59,8 @@ type NameSpace struct {
 	clientset kubernetes.Interface
 }
 
-type info struct {
-}
-
-func New() *Kok {
-	config, err := CreateKubeconfig("")
+func New(kubeconfig string) *Kok {
+	config, err := CreateKubeconfig(kubeconfig)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -394,7 +391,7 @@ func (c Kok) NamespaceList() (*corev1.NamespaceList, error) {
 	})
 }
 
-func (c Kok) NamespaceGet(name string) (*corev1.Namespace, error) {
+func (c Kok) GetNamespace(name string) (*corev1.Namespace, error) {
 	return c.clientset.CoreV1().Namespaces().Get(context.TODO(), name, metav1.GetOptions{})
 }
 
@@ -2449,10 +2446,6 @@ func (c Kok) DeletePod(namespace, name string) error {
 	//c.clientset.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
 }
 
-func (c Kok) DeploymentStatus(namespace, name string) (*v1.Deployment, error) {
-	return c.clientset.AppsV1().Deployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
-}
-
 func (c Kok) CreateAll(registry, ver, project, env, nodePort, serviceSubnet, podSubnet string) (err error) {
 	v := version.GetVersion(ver)
 	namespace := fmt.Sprintf("%s-%s", project, env)
@@ -2615,6 +2608,7 @@ func (c Kok) CreateAll(registry, ver, project, env, nodePort, serviceSubnet, pod
 				},
 				Resources: []string{
 					"secrets",
+					"configmaps",
 				},
 			},
 		},
@@ -2697,7 +2691,7 @@ func (c Kok) CreateAll(registry, ver, project, env, nodePort, serviceSubnet, pod
 			},
 			Resources: &applycorev1.VolumeResourceRequirementsApplyConfiguration{
 				Requests: &corev1.ResourceList{
-					corev1.ResourceStorage: resource.MustParse("10G"),
+					corev1.ResourceStorage: resource.MustParse("1G"),
 				},
 			},
 		},
@@ -2857,18 +2851,18 @@ func (c Kok) CreateAll(registry, ver, project, env, nodePort, serviceSubnet, pod
 								return &v
 							}(),
 							Image: func() *string {
-								//v := "buxiaomo/kube-pki:1.0"
-								v := "buxiaomo/openssl:3.3.1"
+								v := "buxiaomo/kube-pki:1.0.0"
+								//v := "buxiaomo/openssl:3.3.1"
 								return &v
 							}(),
 							ImagePullPolicy: func() *corev1.PullPolicy {
 								v := corev1.PullAlways
 								return &v
 							}(),
-							WorkingDir: func() *string {
-								v := "/etc/kubernetes/pki"
-								return &v
-							}(),
+							//WorkingDir: func() *string {
+							//	v := "/etc/kubernetes/pki"
+							//	return &v
+							//}(),
 							VolumeMounts: []applycorev1.VolumeMountApplyConfiguration{
 								{
 									Name: &pkiPvc.Name,
@@ -2935,7 +2929,7 @@ func (c Kok) CreateAll(registry, ver, project, env, nodePort, serviceSubnet, pod
 						},
 						{
 							Name: func() *string {
-								v := "init-cmd"
+								v := "cp-pki"
 								return &v
 							}(),
 							Image: func() *string {
@@ -2946,22 +2940,6 @@ func (c Kok) CreateAll(registry, ver, project, env, nodePort, serviceSubnet, pod
 								v := corev1.PullAlways
 								return &v
 							}(),
-							Env: []applycorev1.EnvVarApplyConfiguration{
-								{
-									Name: func() *string {
-										v := "PROJECT"
-										return &v
-									}(),
-									Value: &project,
-								},
-								{
-									Name: func() *string {
-										v := "ENV"
-										return &v
-									}(),
-									Value: &env,
-								},
-							},
 							VolumeMounts: []applycorev1.VolumeMountApplyConfiguration{
 								{
 									Name: func() *string {
@@ -2988,81 +2966,39 @@ func (c Kok) CreateAll(registry, ver, project, env, nodePort, serviceSubnet, pod
 							Command: []string{
 								"sh",
 								"-xc",
-								`export ETCDCTL_API=3
-cp -vfr /mnt/pki-vol/etcd/* /etc/kubernetes/pki/etcd
-HOSTNAME=$(hostname)
-ID=${HOSTNAME##*[^0-9]}
-if [ ${ID} -eq 0 ];then
-cat > /etc/kubernetes/pki/etcd/start-${HOSTNAME} << EOF
-export ETCDCTL_API=3
-exec /usr/local/bin/etcd \
---name=${HOSTNAME} \
---data-dir=/var/lib/etcd \
---listen-client-urls https://0.0.0.0:2379 \
---listen-peer-urls=https://0.0.0.0:2380 \
---initial-cluster-state=new \
---initial-cluster-token=kubernetes-etcd-cluster \
---advertise-client-urls=https://${HOSTNAME}.etcd.${PROJECT}-${ENV}:2379 \
---initial-advertise-peer-urls=https://${HOSTNAME}.etcd.${PROJECT}-${ENV}:2380 \
---initial-cluster=etcd-0=https://${HOSTNAME}.etcd.${PROJECT}-${ENV}:2380 \
---client-cert-auth=true \
---trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt \
---cert-file=/etc/kubernetes/pki/etcd/server.crt \
---key-file=/etc/kubernetes/pki/etcd/server.key \
---peer-client-cert-auth=true \
---peer-trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt \
---peer-cert-file=/etc/kubernetes/pki/etcd/peer.crt \
---peer-key-file=/etc/kubernetes/pki/etcd/peer.key \
---listen-metrics-urls=http://0.0.0.0:2381 \
---auto-compaction-retention=1 \
---max-request-bytes=33554432 \
---quota-backend-bytes=8589934592 \
---enable-v2=false \
---snapshot-count=10000 \
---cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_256_GCM_SHA384
-EOF
-chmod +x /etc/kubernetes/pki/etcd/start-${HOSTNAME}
-exit 0
-fi
-
-cat > /etc/kubernetes/pki/etcd/start-${HOSTNAME} << EOF
-set -x
-export ETCDCTL_API=3
-echo "Adding ${HOSTNAME} from etcd cluster"
-etcdctl --endpoints https://etcd-0.etcd.${PROJECT}-${ENV}:2379 \
---cacert /etc/kubernetes/pki/etcd/ca.crt \
---cert /etc/kubernetes/pki/etcd/healthcheck-client.crt \
---key /etc/kubernetes/pki/etcd/healthcheck-client.key \
-member add ${HOSTNAME} --peer-urls=https://${HOSTNAME}.etcd.${PROJECT}-${ENV}:2380 | grep "^ETCD_" > /etc/kubernetes/pki/etcd/.envs
-source /etc/kubernetes/pki/etcd/.envs
-exec /usr/local/bin/etcd \
---name=\${ETCD_NAME} \
---data-dir=/var/lib/etcd \
---listen-client-urls https://0.0.0.0:2379 \
---listen-peer-urls=https://0.0.0.0:2380 \
---initial-cluster-token=kubernetes-etcd-cluster \
---advertise-client-urls=https://${HOSTNAME}.etcd.${PROJECT}-${ENV}:2379 \
---initial-advertise-peer-urls=https://${HOSTNAME}.etcd.${PROJECT}-${ENV}:2380 \
---client-cert-auth=true \
---trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt \
---cert-file=/etc/kubernetes/pki/etcd/server.crt \
---key-file=/etc/kubernetes/pki/etcd/server.key \
---peer-client-cert-auth=true \
---peer-trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt \
---peer-cert-file=/etc/kubernetes/pki/etcd/peer.crt \
---peer-key-file=/etc/kubernetes/pki/etcd/peer.key \
---initial-cluster=\${ETCD_INITIAL_CLUSTER} \
---initial-cluster-state=existing \
---listen-metrics-urls=http://0.0.0.0:2381 \
---auto-compaction-retention=1 \
---max-request-bytes=33554432 \
---quota-backend-bytes=8589934592 \
---enable-v2=false \
---snapshot-count=10000 \
---cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_256_GCM_SHA384
-EOF
-
-chmod +x /etc/kubernetes/pki/etcd/start-${HOSTNAME}`,
+								"cp -vfr /mnt/pki-vol/etcd/* /etc/kubernetes/pki/etcd",
+							},
+						},
+					},
+					Affinity: &applycorev1.AffinityApplyConfiguration{
+						PodAntiAffinity: &applycorev1.PodAntiAffinityApplyConfiguration{
+							RequiredDuringSchedulingIgnoredDuringExecution: []applycorev1.PodAffinityTermApplyConfiguration{
+								{
+									LabelSelector: &applymetav1.LabelSelectorApplyConfiguration{
+										MatchExpressions: []applymetav1.LabelSelectorRequirementApplyConfiguration{
+											{
+												Key: func() *string {
+													v := "app"
+													return &v
+												}(),
+												Operator: func() *metav1.LabelSelectorOperator {
+													v := metav1.LabelSelectorOpIn
+													return &v
+												}(),
+												Values: []string{
+													"etcd",
+												},
+											},
+										},
+									},
+									Namespaces: []string{
+										namespace,
+									},
+									TopologyKey: func() *string {
+										v := "kubernetes.io/hostname"
+										return &v
+									}(),
+								},
 							},
 						},
 					},
@@ -3073,8 +3009,12 @@ chmod +x /etc/kubernetes/pki/etcd/start-${HOSTNAME}`,
 								return &name
 							}(),
 							Image: func() *string {
-								a := fmt.Sprintf("%s/etcd:%s", registry, v["etcd"])
+								a := fmt.Sprintf("buxiaomo/etcd:%s", v["etcd"])
 								return &a
+							}(),
+							ImagePullPolicy: func() *corev1.PullPolicy {
+								v := corev1.PullAlways
+								return &v
 							}(),
 							Ports: []applycorev1.ContainerPortApplyConfiguration{
 								{
@@ -3248,62 +3188,7 @@ chmod +x /etc/kubernetes/pki/etcd/start-${HOSTNAME}`,
 										Command: []string{
 											"/bin/sh",
 											"-cx",
-											`export ETCDCTL_API=3
-isLeader(){
-	ETCDCTL_API=3 etcdctl --endpoints https://$(hostname).etcd.${NAMESPACE}:2379 \
-	--cacert /etc/kubernetes/pki/etcd/ca.crt \
-	--cert /etc/kubernetes/pki/etcd/healthcheck-client.crt \
-	--key /etc/kubernetes/pki/etcd/healthcheck-client.key \
-	endpoint status| awk -F ', ' '{print $5}'
-}
-member_hash() {
-	etcdctl --endpoints https://etcd-0.etcd.default:2379 \
-	--cacert /etc/kubernetes/pki/etcd/ca.crt \
-	--cert /etc/kubernetes/pki/etcd/healthcheck-client.crt \
-	--key /etc/kubernetes/pki/etcd/healthcheck-client.key \
-	member list | grep https://${HOSTNAME}.etcd.${NAMESPACE}:2380 | cut -d',' -f1
-}
-if [ "$(isLeader)" == "true" ];then
-	ep=""
-	for i in $(seq 0 $((9 - 1))); do
-		ping -c 1 etcd-${i}.etcd.${NAMESPACE} >/dev/null  2>&1 
-		if [ $? -eq 0 ];then
-			ep="${ep}${ep:+,}https://etcd-${i}.etcd.${NAMESPACE}:2379"
-		fi
-	done
-	
-	NEW_EP=$(etcdctl --endpoints ${ep} \
-	--cacert /etc/kubernetes/pki/etcd/ca.crt \
-	--cert /etc/kubernetes/pki/etcd/healthcheck-client.crt \
-	--key /etc/kubernetes/pki/etcd/healthcheck-client.key \
-	endpoint health | grep healthy | head -n 1 | awk '{print $1}')
-	
-	NEW_HASH=$(etcdctl --endpoints ${ep} \
-	--cacert /etc/kubernetes/pki/etcd/ca.crt \
-	--cert /etc/kubernetes/pki/etcd/healthcheck-client.crt \
-	--key /etc/kubernetes/pki/etcd/healthcheck-client.key \
-	member list | grep $NEW_EP | awk -F ', ' '{print $1}')
-	
-	etcdctl --endpoints ${ep} \
-	--cacert /etc/kubernetes/pki/etcd/ca.crt \
-	--cert /etc/kubernetes/pki/etcd/healthcheck-client.crt \
-	--key /etc/kubernetes/pki/etcd/healthcheck-client.key \
-	move-leader ${NEW_HASH}
-fi
-HOSTNAME=$(hostname)
-ID=${HOSTNAME##*[^0-9]}
-if [ ${ID} -ne 0 ];then
-  echo "Removing ${HOSTNAME} from etcd cluster"
-  etcdctl --endpoints https://etcd-0.etcd.${NAMESPACE}:2379 \
-  --cacert /etc/kubernetes/pki/etcd/ca.crt \
-  --cert /etc/kubernetes/pki/etcd/healthcheck-client.crt \
-  --key /etc/kubernetes/pki/etcd/healthcheck-client.key \
-  member remove $(member_hash)
-  if [ $? -eq 0 ]; then
-	  # Remove everything otherwise the cluster will no longer scale-up
-	  rm -rf /var/lib/etcd/*
-  fi
-fi`,
+											"/usr/local/bin/prestop.sh",
 										},
 									},
 								},
@@ -3311,7 +3196,7 @@ fi`,
 							Command: []string{
 								"/bin/sh",
 								"-ecx",
-								"/etc/kubernetes/pki/etcd/start-${HOSTNAME}",
+								"/usr/local/bin/entrypoint.sh",
 							},
 							RestartPolicy: nil,
 						},
@@ -3333,7 +3218,7 @@ fi`,
 						},
 						Resources: &applycorev1.VolumeResourceRequirementsApplyConfiguration{
 							Requests: &corev1.ResourceList{
-								corev1.ResourceStorage: resource.MustParse("1Gi"),
+								corev1.ResourceStorage: resource.MustParse("5Gi"),
 							},
 						},
 					},
@@ -3470,6 +3355,38 @@ rules:
 					},
 				},
 				Spec: &applycorev1.PodSpecApplyConfiguration{
+					Affinity: &applycorev1.AffinityApplyConfiguration{
+						PodAntiAffinity: &applycorev1.PodAntiAffinityApplyConfiguration{
+							RequiredDuringSchedulingIgnoredDuringExecution: []applycorev1.PodAffinityTermApplyConfiguration{
+								{
+									LabelSelector: &applymetav1.LabelSelectorApplyConfiguration{
+										MatchExpressions: []applymetav1.LabelSelectorRequirementApplyConfiguration{
+											{
+												Key: func() *string {
+													v := "app"
+													return &v
+												}(),
+												Operator: func() *metav1.LabelSelectorOperator {
+													v := metav1.LabelSelectorOpIn
+													return &v
+												}(),
+												Values: []string{
+													"kube-apiserver",
+												},
+											},
+										},
+									},
+									Namespaces: []string{
+										namespace,
+									},
+									TopologyKey: func() *string {
+										v := "kubernetes.io/hostname"
+										return &v
+									}(),
+								},
+							},
+						},
+					},
 					Volumes: []applycorev1.VolumeApplyConfiguration{
 						{
 							Name: func() *string {
@@ -3851,6 +3768,38 @@ users:
 					},
 				},
 				Spec: &applycorev1.PodSpecApplyConfiguration{
+					Affinity: &applycorev1.AffinityApplyConfiguration{
+						PodAntiAffinity: &applycorev1.PodAntiAffinityApplyConfiguration{
+							RequiredDuringSchedulingIgnoredDuringExecution: []applycorev1.PodAffinityTermApplyConfiguration{
+								{
+									LabelSelector: &applymetav1.LabelSelectorApplyConfiguration{
+										MatchExpressions: []applymetav1.LabelSelectorRequirementApplyConfiguration{
+											{
+												Key: func() *string {
+													v := "app"
+													return &v
+												}(),
+												Operator: func() *metav1.LabelSelectorOperator {
+													v := metav1.LabelSelectorOpIn
+													return &v
+												}(),
+												Values: []string{
+													"kube-controller-manager",
+												},
+											},
+										},
+									},
+									Namespaces: []string{
+										namespace,
+									},
+									TopologyKey: func() *string {
+										v := "kubernetes.io/hostname"
+										return &v
+									}(),
+								},
+							},
+						},
+					},
 					Volumes: []applycorev1.VolumeApplyConfiguration{
 						{
 							Name: func() *string {
@@ -4097,6 +4046,38 @@ done`,
 					},
 				},
 				Spec: &applycorev1.PodSpecApplyConfiguration{
+					Affinity: &applycorev1.AffinityApplyConfiguration{
+						PodAntiAffinity: &applycorev1.PodAntiAffinityApplyConfiguration{
+							RequiredDuringSchedulingIgnoredDuringExecution: []applycorev1.PodAffinityTermApplyConfiguration{
+								{
+									LabelSelector: &applymetav1.LabelSelectorApplyConfiguration{
+										MatchExpressions: []applymetav1.LabelSelectorRequirementApplyConfiguration{
+											{
+												Key: func() *string {
+													v := "app"
+													return &v
+												}(),
+												Operator: func() *metav1.LabelSelectorOperator {
+													v := metav1.LabelSelectorOpIn
+													return &v
+												}(),
+												Values: []string{
+													"kube-scheduler",
+												},
+											},
+										},
+									},
+									Namespaces: []string{
+										namespace,
+									},
+									TopologyKey: func() *string {
+										v := "kubernetes.io/hostname"
+										return &v
+									}(),
+								},
+							},
+						},
+					},
 					InitContainers: []applycorev1.ContainerApplyConfiguration{
 						{
 							Name: func() *string {
@@ -4292,5 +4273,18 @@ done`,
 }
 
 func (c Kok) GetDeployment(namespace, name string) (*v1.Deployment, error) {
+	return c.clientset.AppsV1().Deployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+}
+
+func (c Kok) GetConfigMap(namespace, name string) (*corev1.ConfigMap, error) {
+	//return c.clientset.AppsV1().(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	return c.clientset.CoreV1().ConfigMaps(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+}
+
+func (c Kok) GetDaemonSets(namespace, name string) (*v1.DaemonSet, error) {
+	return c.clientset.AppsV1().DaemonSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+}
+
+func (c Kok) DeploymentStatus(namespace, name string) (*v1.Deployment, error) {
 	return c.clientset.AppsV1().Deployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }

@@ -11,6 +11,11 @@
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
     <link href="/static/css/materialdesignicons.min.css" rel="stylesheet">
     <link href="/static/css/style.min.css" rel="stylesheet">
+
+    <!--对话框-->
+    <link rel="stylesheet" href="/static/css/jconfirm/jquery-confirm.min.css">
+
+
 </head>
 
 <body>
@@ -356,6 +361,9 @@
                                             </td>
                                             <td>
                                                 <div class="btn-group">
+
+                                                    <a class="btn btn-xs btn-default" onclick="Status({{.Name}});" title="组件状态" data-toggle="tooltip"><i class="mdi mdi-information"></i></a>
+                                                    <a class="btn btn-xs btn-default" onclick="Join({{.Name}});" title="添加节点" data-toggle="tooltip"><i class="mdi mdi-console"></i></a>
                                                     <a class="btn btn-xs btn-default" onclick="ClusterHA({{.Name}},{{.Name}});" title="高可用" data-toggle="tooltip"><i class="mdi mdi-hexagon-multiple"></i></a>
                                                     <a class="btn btn-xs btn-default" onclick="DelCluster({{.Name}});" title="删除" data-toggle="tooltip"><i class="mdi mdi-delete"></i></a>
                                                 </div>
@@ -389,6 +397,43 @@
 <script type="text/javascript" src="/static/js/lightyear.js"></script>
 
 <script type="text/javascript">
+    function Status(name){
+        $.ajax({
+            type: 'GET',
+            url: '/console/cluster/status?name=' + name,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function(r) {
+                $.confirm({
+                    title: '集群信息',
+                    content: "coredns: " + r.coredns + "<br>" +
+                    "metrics-server: " + r.metricsServer + "<br>" +
+                    "network: " + r.network,
+                    // type: 'green',
+                    buttons: {
+                        close: {
+                            text: '关闭',
+                        }
+                    }
+                });
+            },
+        });
+    }
+
+    function Join(name){
+        $.alert({
+            title: '添加节点命令: ',
+            content: "<pre>curl -s " + window.location.protocol +"://" + window.location.host +"/install?name=" + name + " | bash</pre>",
+            buttons: {
+                confirm: {
+                    text: '确认',
+                    btnClass: 'btn-primary',
+                    action: function(){}
+                },
+            }
+        });
+    }
+
     function getNetworkVersion(){
         $.ajax({
             type: 'GET',
@@ -437,47 +482,84 @@
     });
 
     function DelCluster(name){
-        $.ajax({
-            type: 'DELETE',
-            url: '/console/cluster?name=' + name ,
-            contentType: "application/json; charset=utf-8",
-            dataType: "json",
-            success: function(data) {
-                if(data.msg == null ){
-                    lightyear.loading('show');
-                    setTimeout(function() {
-                        lightyear.loading('hide');
-                        lightyear.notify('删除成功，页面即将自动跳转~', 'success', 100000);
-                        window.location.reload();
-                    }, 1e3)
-                    //
-                }else{
-                    alert(data.msg);
+        $.alert({
+            title: '确认？',
+            content: '是否删除集群：'+ name,
+            buttons: {
+                confirm: {
+                    text: '确认',
+                    btnClass: 'btn-primary',
+                    action: function(){
+                        $.ajax({
+                            type: 'DELETE',
+                            url: '/console/cluster?name=' + name ,
+                            contentType: "application/json; charset=utf-8",
+                            dataType: "json",
+                            success: function(data) {
+                                if(data.msg == null ){
+                                    lightyear.loading('show');
+                                    setTimeout(function() {
+                                        lightyear.loading('hide');
+                                        lightyear.notify('删除成功，页面即将自动跳转~', 'success', 100000);
+                                        window.location.reload();
+                                    }, 1e3)
+                                    //
+                                }else{
+                                    alert(data.msg);
+                                }
+                            },
+                        });
+                    }
+                },
+                cancel: {
+                    text: '取消',
+                    action: function () {
+                        // $.alert('你点击了取消!');
+                    }
                 }
-            },
+            }
         });
     }
 
     function ClusterHA(namespace) {
-        $.ajax({
-            type: 'PUT',
-            url: '/console/ha?name=' + namespace,
-            contentType: "application/json; charset=utf-8",
-            success: function(data) {
-                console.log(data);
-                if(data.msg == null ){
-                    lightyear.loading('show');
-                    setTimeout(function() {
-                        lightyear.loading('hide');
-                        lightyear.notify('扩容成功，页面即将自动跳转~', 'success', 100000);
-                        window.location.reload();
-                    }, 1e3)
-                }else{
-                    alert(data.msg);
+        $.alert({
+            title: '是否启用HA？',
+            content: '该操作将扩容 control-plane 组件，并保证组件在不同节点上运行',
+            buttons: {
+                confirm: {
+                    text: '确认',
+                    btnClass: 'btn-primary',
+                    action: function(){
+                        $.ajax({
+                            type: 'PUT',
+                            url: '/console/ha?name=' + namespace,
+                            contentType: "application/json; charset=utf-8",
+                            success: function(data) {
+                                console.log(data);
+                                if(data.msg == null ){
+                                    lightyear.loading('show');
+                                    setTimeout(function() {
+                                        lightyear.loading('hide');
+                                        lightyear.notify('扩容成功，页面即将自动跳转~', 'success', 100000);
+                                        window.location.reload();
+                                    }, 1e3)
+                                }else{
+                                    alert(data.msg);
+                                }
+                            },
+                        });
+                    }
+                },
+                cancel: {
+                    text: '取消',
+                    action: function () {
+                        // $.alert('你点击了取消!');
+                    }
                 }
-            },
+            }
         });
     }
+
     $('.addCluster').on('click', function () {
         svc = $('.serviceCidr').val();
         data = JSON.stringify({
@@ -492,7 +574,7 @@
             "network": $('.network').val(),
             "networkVersion":$('.networkversion').val()
         })
-        // console.log(data);
+
         $.ajax({
             type: 'POST',
             url: '/console/cluster' ,
@@ -502,13 +584,12 @@
             success: function(data) {
                 console.log(data);
                 if(data.msg == null ){
-                    alert(data.cmd);
+                    // alert(data.cmd);
                     window.location.reload();
                 }else{
                     alert(data.msg);
                 }
             },
-            // dataType: dataType
         });
     });
 </script>

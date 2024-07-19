@@ -60,7 +60,7 @@ func (app appMark) Flannel(namespace, name, version string) flannel {
 	return flannel{
 		Namespace: namespace,
 		Name:      name,
-		chartPath: fmt.Sprintf("./appmarket/assets/flannel-%s.tgz", version),
+		chartPath: fmt.Sprintf("./appmarket/assets/flannel/flannel-%s.tgz", version),
 		cfg:       app.cfg,
 	}
 }

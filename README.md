@@ -22,6 +22,17 @@ Will be used to store individual cluster etcd data and certificate files.
 You need a kubernetes cluster first, then deploy this project on this kubernetes.
 
 ```shell
+sudo modprobe nfs 
+sudo modprobe nfsd
+docker run --privileged -d --name nfs-server \
+--net host \
+-e NFS_EXPORT_0='/k *(rw,fsid=1,sync,insecure,no_subtree_check,no_root_squash)'  \
+-v ./nfs:/k \
+erichough/nfs-server:2.2.1
+
+kind create cluster --name kok --image docker.m.moby.org.cn/kindest/node:v1.30.2
+sudo bin/cloud-provider-kind
+
 helm upgrade -i kok ./kok -n kok --create-namespace
 
 # get EXTERNAL-IP and redeploy

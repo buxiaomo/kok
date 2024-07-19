@@ -10,6 +10,7 @@ import (
 	"kok/pkg/utils"
 	"kok/pkg/version"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -17,7 +18,8 @@ import (
 
 func Plugin(namespace, kubeconfig, network, version string, opts map[string]map[string]interface{}) {
 
-	c := control.New()
+	c := control.New("")
+	ns, _ := c.GetNamespace(namespace)
 
 	timeout := time.After(time.Minute * 15)
 	finish := make(chan bool)
@@ -50,9 +52,9 @@ func Plugin(namespace, kubeconfig, network, version string, opts map[string]map[
 					default:
 						am.Flannel("kube-system", "flannel", version).Install(opts["flannel"])
 					}
-					am.CoreDNS("kube-system", "coredns").Install(opts["coredns"])
+					am.CoreDNS("kube-system", "coredns", ns.Labels["CoreDNS"]).Install(opts["coredns"])
 
-					am.MetricsServer("kube-system", "metrics-server").Install(opts["metrics"])
+					//am.MetricsServer("kube-system", "metrics-server", ns.Labels["metrics-server"]).Install(opts["metrics"])
 					finish <- true
 					return
 				}
@@ -65,11 +67,41 @@ func Plugin(namespace, kubeconfig, network, version string, opts map[string]map[
 	<-finish
 }
 
+func ClusterStatus(c *gin.Context) {
+	name := c.Query("name")
+
+	var networkName string
+	l := control.New("")
+	ns, _ := l.GetNamespace(name)
+
+	switch ns.Labels["network"] {
+	case "flannel":
+		networkName = "kube-flannel-ds"
+	case "calico":
+		networkName = "calico-node"
+	case "canal":
+		networkName = "canal"
+	case "antrea":
+		networkName = "antrea-agent"
+	}
+
+	r := control.New(fmt.Sprintf("./kubeconfig/%s.kubeconfig", name))
+	cd, _ := r.DeploymentStatus("kube-system", "coredns")
+	ms, _ := r.DeploymentStatus("kube-system", "metrics-server")
+	nw, _ := r.GetDaemonSets("kube-system", networkName)
+
+	c.JSON(http.StatusOK, gin.H{
+		"coredns":       fmt.Sprintf("%d/%d", cd.Status.AvailableReplicas, cd.Status.Replicas),
+		"metricsServer": fmt.Sprintf("%d/%d", ms.Status.AvailableReplicas, ms.Status.Replicas),
+		"network":       fmt.Sprintf("%d/%d", nw.Status.CurrentNumberScheduled, nw.Status.DesiredNumberScheduled),
+	})
+}
+
 func ClusterPages(c *gin.Context) {
 	strKeys := maps.Keys(version.List)
 	sort.Strings(strKeys)
 	var instance []map[string]interface{}
-	k := control.New()
+	k := control.New("")
 	ins, err := k.NamespaceList()
 	if err != nil {
 
@@ -221,7 +253,7 @@ func ClusterCreate(c *gin.Context) {
 
 	minIp, _ := utils.GetCidrIpRange(strings.Replace(strings.Replace(info.ServiceCidr, "/", "-", 1), "-", "/", 1))
 
-	kok := control.New()
+	kok := control.New("")
 	namespace := fmt.Sprintf("%s-%s", info.Project, info.Env)
 
 	_, err = kok.CreateNS(namespace, map[string]string{
@@ -240,6 +272,8 @@ func ClusterCreate(c *gin.Context) {
 		"networkVersion": info.NetworkVersion,
 		"pause":          v["pause"],
 		"clusterDNS":     minIp,
+		"CoreDNS":        v["coredns"],
+		"metrics-server": v["metrics-server"],
 	})
 
 	if err != nil {
@@ -285,9 +319,16 @@ func ClusterCreate(c *gin.Context) {
 
 func ClusterDelete(c *gin.Context) {
 	name := c.Query("name")
-	fmt.Println(name)
-	kok := control.New()
+
+	kok := control.New("")
 	kok.DeleteAll(name)
+
+	filename := fmt.Sprintf("./kubeconfig/%s.kubeconfig", name)
+	_, err := os.Stat(filename)
+	if err == nil {
+		os.Remove(filename)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"cmd": nil,
 		"msg": nil,
@@ -297,7 +338,7 @@ func ClusterDelete(c *gin.Context) {
 func ClusterReDeploy(c *gin.Context) {
 	namespace := c.Query("namespace")
 	name := c.Query("name")
-	kok := control.New()
+	kok := control.New("")
 	e := kok.DeletePod(namespace, name)
 	if e != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -316,7 +357,7 @@ func ClusterReDeploy(c *gin.Context) {
 
 func ClusterEnableHA(c *gin.Context) {
 	name := c.Query("name")
-	kok := control.New()
+	kok := control.New("")
 	err := kok.ScaleService(name)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{

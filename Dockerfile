@@ -1,4 +1,4 @@
-FROM golang:1.22.4-alpine3.20 AS builder
+FROM golang:1.22.5-alpine3.20 AS builder
 ENV GOPROXY "https://goproxy.cn,direct"
 RUN apk add --no-cache g++ git
 WORKDIR /go/src/app

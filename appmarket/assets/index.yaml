@@ -245,15 +245,15 @@ entries:
     version: 3.12.3
   coredns:
   - apiVersion: v2
-    appVersion: 1.9.4
+    appVersion: 1.9.3
     created: "2024-07-01T12:43:39.857664+08:00"
     description: A Helm chart for Kubernetes
     digest: 769856d5a053a5682851ff417dc51457885159f427fec3fdd20f84f349366db0
     name: coredns
     type: application
     urls:
-    - coredns-1.9.4.tgz
-    version: 1.9.4
+    - coredns-1.9.3.tgz
+    version: 1.9.3
   flannel:
   - apiVersion: v2
     appVersion: 0.25.4

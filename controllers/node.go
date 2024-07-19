@@ -24,12 +24,14 @@ type install struct {
 	Pause         string
 	ServiceSubnet string
 	Pkiurl        string
+	Ca            string
+	Key           string
 }
 
 func NodeInit(c *gin.Context) {
 	name := c.Query("name")
-	kok := control.New()
-	ns, err := kok.NamespaceGet(name)
+	kok := control.New("")
+	ns, err := kok.GetNamespace(name)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
@@ -43,6 +45,9 @@ func NodeInit(c *gin.Context) {
 		fmt.Println("create template failed, err:", err)
 		return
 	}
+
+	cm, _ := kok.GetConfigMap(name, "pki")
+	fmt.Println()
 
 	//var temp io.Writer
 	buf := new(bytes.Buffer)
@@ -58,6 +63,8 @@ func NodeInit(c *gin.Context) {
 		Project:       ns.Labels["project"],
 		Env:           ns.Labels["env"],
 		Pkiurl:        viper.GetString("PKI_URL"),
+		Ca:            cm.Data["ca.crt"],
+		Key:           cm.Data["ca.key"],
 	})
 	if err != nil {
 		panic(err)

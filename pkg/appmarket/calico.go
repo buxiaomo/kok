@@ -60,7 +60,7 @@ func (app appMark) Calico(namespace, name, version string) calico {
 	return calico{
 		Namespace: namespace,
 		Name:      name,
-		chartPath: fmt.Sprintf("./appmarket/assets/calico-%s.tgz", version),
+		chartPath: fmt.Sprintf("./appmarket/assets/calico/calico-%s.tgz", version),
 		cfg:       app.cfg,
 	}
 }

@@ -57,11 +57,11 @@ func (c coreDNS) UnInstall() {
 	log.Printf("%s 成功卸载\n", resp.Release.Name)
 }
 
-func (app appMark) CoreDNS(namespace, name string) coreDNS {
+func (app appMark) CoreDNS(namespace, name, version string) coreDNS {
 	return coreDNS{
 		Namespace: namespace,
 		Name:      name,
-		chartPath: "./appmarket/assets/coredns-1.9.4.tgz",
+		chartPath: fmt.Sprintf("./appmarket/assets/coredns/coredns-%s.tgz", version),
 		cfg:       app.cfg,
 	}
 }
