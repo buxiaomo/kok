@@ -661,11 +661,9 @@ ExecStart=/usr/local/bin/kubelet \\
  --config=/var/lib/kubelet/config.yaml \\
  --pod-infra-container-image="{{ .Registry }}/pause:{{ .Pause }}" \\
  --runtime-request-timeout=15m \\
- --container-runtime-endpoint=unix:///run/containerd/containerd.sock \\
- --container-runtime=remote \\
  --anonymous-auth=false \\
  --authorization-mode=Webhook \\
- --allowed-unsafe-sysctls=net.* \\
+ --allowed-unsafe-sysctls=net.* {{ .KubeletArgs }} \\
  --v=1
 
 Restart=on-failure

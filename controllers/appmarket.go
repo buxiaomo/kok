@@ -9,10 +9,13 @@ import (
 func AppmarketGet(c *gin.Context) {
 	name := c.Query("name")
 	if name == "" {
-
+		c.JSON(http.StatusBadRequest, gin.H{
+			"data": nil,
+			"msg":  "need name",
+		})
+		return
 	} else {
 		am := appmarket.New("")
-		//fmt.Println(chart.Version, chart.Description)
 		c.JSON(http.StatusOK, gin.H{
 			"data": am.Chart().Search(name),
 			"msg":  nil,

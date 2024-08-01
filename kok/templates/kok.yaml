@@ -1,0 +1,152 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kok
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: application:kok
+rules:
+  - apiGroups:
+      - "apps"
+    resources:
+      - deployments
+    verbs:
+      - delete
+      - create
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - list
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - patch
+      - create
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - delete
+      - create
+      - patch
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumeclaims
+    verbs:
+      - delete
+      - create
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - delete
+      - create
+      - patch
+  - apiGroups:
+      - "storage.k8s.io"
+    resources:
+      - storageclasses
+    verbs:
+      - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: application:kok
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: application:kok
+subjects:
+  - kind: ServiceAccount
+    name: kok
+    namespace: {{ .Release.Namespace }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kok
+spec:
+  type: LoadBalancer
+  selector:
+    app: kok
+  ports:
+    - name: tcp-8080
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kok
+  labels:
+    app: kok
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kok
+  template:
+    metadata:
+      labels:
+        app: kok
+    spec:
+      volumes:
+        - name: conf-vol
+          persistentVolumeClaim:
+            claimName: conf-vol
+      serviceAccount: kok
+      containers:
+        - name: kok
+          image: "docker.m.moby.org.cn/{{ .Values.hub }}:{{ .Values.tag }}"
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: conf-vol
+              subPath: conf-vol
+              mountPath: /etc/prometheus/conf.d
+          ports:
+            - name: tcp-8080
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            initialDelaySeconds: 60
+            periodSeconds: 5
+            timeoutSeconds: 5
+            tcpSocket:
+              port: 8080
+          readinessProbe:
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+            tcpSocket:
+              port: 8080
+#          resources:
+#            limits:
+#              cpu: "2"
+#              memory: "1Gi"
+#            requests:
+#              cpu: "60m"
+#              memory: "850Mi"
+          env:
+            - name: TZ
+              value: "Asia/Shanghai"
+            - name: GIN_MODE
+              value: "release"
+            - name: WEBHOOK_URL
+              value: "{{ .Values.webhookUrl }}"

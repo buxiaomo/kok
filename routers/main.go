@@ -62,10 +62,8 @@ func SetupRouter() *gin.Engine {
 	r.GET("/install", controllers.NodeInit)
 	r.POST("/kubeconfig", func(c *gin.Context) {
 		name, _ := c.GetQuery("name")
-
 		fileHeader, err := c.FormFile("file")
 		if err != nil {
-			fmt.Println(err.Error())
 			c.String(http.StatusBadRequest, fmt.Sprintf("Failed to get file: %s", err.Error()))
 			return
 		}
@@ -94,7 +92,6 @@ func SetupRouter() *gin.Engine {
 		}
 
 		err = ioutil.WriteFile(fmt.Sprintf("./kubeconfig/%s.kubeconfig", name), decodedContent, 0666)
-		//err = ioutil.WriteFile(fmt.Sprintf("./kubeconfig/%s.kubeconfig", name), fileContent, 0666)
 		if err != nil {
 			log.Printf("Failed to save file: %v", err)
 			c.String(http.StatusInternalServerError, "Failed to save file")
@@ -112,11 +109,13 @@ func SetupRouter() *gin.Engine {
 		})
 		private.PUT("/ha", controllers.ClusterEnableHA)
 		private.GET("/cluster", controllers.ClusterPages)
+		private.GET("/version", controllers.VersionPages)
+		private.DELETE("/version", controllers.DeleteVersion)
+		private.POST("/version", controllers.CreateVersion)
 		private.GET("/cluster/status", controllers.ClusterStatus)
+		private.PUT("/cluster/monitor", controllers.ClusterMonitor)
 		private.POST("/cluster", controllers.ClusterCreate)
 		private.DELETE("/cluster", controllers.ClusterDelete)
-		//private.PATCH("/cluster", controllers.ClusterReDeploy)
-		private.PUT("/cluster", controllers.ClusterReDeploy)
 		private.GET("/appmarket", controllers.AppmarketGet)
 	}
 

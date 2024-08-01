@@ -26,8 +26,8 @@ sudo modprobe nfs
 sudo modprobe nfsd
 docker run --privileged -d --name nfs-server \
 --net host \
--e NFS_EXPORT_0='/k *(rw,fsid=1,sync,insecure,no_subtree_check,no_root_squash)'  \
--v ./nfs:/k \
+-e NFS_EXPORT_0='/aaa *(rw,fsid=1,sync,insecure,no_subtree_check,no_root_squash)'  \
+-v /Users/peng.liu/temp/nfs:/aaa \
 erichough/nfs-server:2.2.1
 
 kind create cluster --name kok --image docker.m.moby.org.cn/kindest/node:v1.30.2
@@ -46,3 +46,6 @@ Now you can open the link to create the cluster
 
 ## Layout
 <img src="./img/cluster.png">
+
+* https://kubernetes.io/docs/reference/kubernetes-api/
+* https://gist.github.com/alaypatel07/92835ab398a342570a3940474590e825

@@ -1,6 +1,7 @@
 apiVersion: v2
 name: antrea
 description: support kubernetes v1.26
+icon: https://github.com/antrea-io/antrea/blob/main/docs/assets/logo/antrea_logo_stacked_sml.png?raw=true
 
 # A chart can be either an 'application' or a 'library' chart.
 #

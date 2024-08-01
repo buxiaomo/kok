@@ -1,6 +1,7 @@
 FROM golang:1.22.5-alpine3.20 AS builder
 ENV GOPROXY "https://goproxy.cn,direct"
-RUN apk add --no-cache g++ git
+RUN apk add --no-cache g++ git curl bash openssl \
+    && curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 WORKDIR /go/src/app
 COPY go.mod go.sum /go/src/app/
 RUN go mod download
@@ -15,8 +16,8 @@ COPY --from=builder /go/src/app/main ./main
 COPY --from=builder /go/src/app/templates ./templates
 COPY --from=builder /go/src/app/appmarket ./appmarket
 COPY --from=builder /go/src/app/static ./static
-RUN mkdir -p ./kubeconfig \
-    && chown -R  1000.1000 /app
+COPY --from=builder /usr/local/bin/helm /usr/local/bin/helm
+COPY entrypoint.sh /entrypoint.sh
 EXPOSE 8080
 USER 1000
-CMD ["/app/main"]
+CMD ["/entrypoint.sh"]

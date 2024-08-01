@@ -34,6 +34,7 @@
                     <ul class="nav nav-drawer">
                         <li class="nav-item"> <a href="/console/index"><i class="mdi mdi-home"></i> 后台首页</a> </li>
                         <li class="nav-item active"> <a href="/console/cluster"><i class="mdi mdi-cube"></i> 集群管理</a> </li>
+                        <li class="nav-item"> <a href="/console/version"><i class="mdi mdi-view-list"></i> 版本管理</a> </li>
                     </ul>
                 </nav>
 
@@ -274,7 +275,7 @@
                                                                     <div class="col-md-10">
                                                                         <select class="form-control clusterVersion" id="example-select" name="example-select" size="1">
                                                                             {{ range .items }}
-                                                                            <option value="{{ . }}">{{ . }}</option>
+                                                                            <option value="{{ .Kubernetes }}">{{ .Kubernetes }}</option>
                                                                             {{ end }}
                                                                         </select>
                                                                     </div>
@@ -301,7 +302,7 @@
                                                                     <label class="col-md-2 control-label" for="example-network">网络插件</label>
                                                                     <div class="col-md-4">
                                                                         <select class="form-control network" id="example-network" name="example-select" size="1" onchange="getNetworkVersion();">
-                                                                            <option value="none">请选择</option>
+                                                                            <option value="none">none</option>
                                                                             <option value="flannel">flannel</option>
                                                                             <option value="calico">calico</option>
                                                                             <option value="canal">canal</option>
@@ -364,7 +365,8 @@
 
                                                     <a class="btn btn-xs btn-default" onclick="Status({{.Name}});" title="组件状态" data-toggle="tooltip"><i class="mdi mdi-information"></i></a>
                                                     <a class="btn btn-xs btn-default" onclick="Join({{.Name}});" title="添加节点" data-toggle="tooltip"><i class="mdi mdi-console"></i></a>
-                                                    <a class="btn btn-xs btn-default" onclick="ClusterHA({{.Name}},{{.Name}});" title="高可用" data-toggle="tooltip"><i class="mdi mdi-hexagon-multiple"></i></a>
+                                                    <a class="btn btn-xs btn-default" onclick="ClusterHA({{.Name}},{{.Name}});" title="启用高可用" data-toggle="tooltip"><i class="mdi mdi-hexagon-multiple"></i></a>
+                                                    <a class="btn btn-xs btn-default" onclick="EnableMonitor({{.Name}});" title="启用监控" data-toggle="tooltip"><i class="mdi mdi-monitor"></i></a>
                                                     <a class="btn btn-xs btn-default" onclick="DelCluster({{.Name}});" title="删除" data-toggle="tooltip"><i class="mdi mdi-delete"></i></a>
                                                 </div>
                                             </td>
@@ -404,11 +406,27 @@
             contentType: "application/json; charset=utf-8",
             dataType: "json",
             success: function(r) {
+                // console.log(r);
+                // var network
+                // var sts
+                // console.log(typeof r.flannel);
+                // if( typeof r.flannel === 'string'){
+                //     network === "flannel"
+                //     sts === r.flannel
+                // } else if(! typeof r.calico === 'string'){
+                //     network === "calico"
+                //     sts === r.calico
+                // }else if(! typeof r.canal === 'string'){
+                //     network === "canal"
+                //     sts === r.canal
+                // }else {
+                //     network === "antrea"
+                //     sts === r.antrea
+                // }
                 $.confirm({
                     title: '集群信息('+name+')',
                     content: "coredns: " + r.coredns + "<br>" +
-                    "metrics-server: " + r.metricsServer + "<br>" +
-                    "network: " + r.network,
+                    "metrics-server: " + r.metricsServer + "<br>" + r.network.name+": "+ r.network.status,
                     // type: 'green',
                     buttons: {
                         close: {
@@ -481,6 +499,45 @@
         });
     });
 
+    function EnableMonitor(name){
+        $.alert({
+            title: '确认？',
+            content: '是否启用监控：'+ name,
+            buttons: {
+                confirm: {
+                    text: '确认',
+                    btnClass: 'btn-primary',
+                    action: function(){
+                        $.ajax({
+                            type: 'PUT',
+                            url: '/console/cluster/monitor?name=' + name ,
+                            contentType: "application/json; charset=utf-8",
+                            dataType: "json",
+                            success: function(data) {
+                                if(data.msg == null ){
+                                    lightyear.loading('show');
+                                    setTimeout(function() {
+                                        lightyear.loading('hide');
+                                        lightyear.notify('成功，页面即将自动跳转~', 'success', 100000);
+                                        window.location.reload();
+                                    }, 1e3)
+                                    //
+                                }else{
+                                    alert(data.msg);
+                                }
+                            },
+                        });
+                    }
+                },
+                cancel: {
+                    text: '取消',
+                    action: function () {
+                        // $.alert('你点击了取消!');
+                    }
+                }
+            }
+        });
+    }
     function DelCluster(name){
         $.alert({
             title: '确认？',

@@ -3,8 +3,9 @@
 .idea
 __pycache__
 main
-kubeconfig/*
+kubeconfig/*.kubeconfig
 .ssh
 .vagrant
 !appmarket/assets/.gitignore
 appmarket/assets/*
+*.sqlite

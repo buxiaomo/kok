@@ -14,7 +14,7 @@ import (
 
 var db *gorm.DB
 
-func ConnectDB(url string, t string) {
+func ConnectDB(t, url string) {
 	var (
 		database *gorm.DB
 		err      error
@@ -36,6 +36,7 @@ func ConnectDB(url string, t string) {
 			return time.Now().Local()
 		},
 	}
+
 	switch t {
 	case "mysql":
 		database, err = gorm.Open(mysql.Open(url), cfg)
@@ -54,7 +55,7 @@ func ConnectDB(url string, t string) {
 	db = database
 
 	if err := db.AutoMigrate(
-		&User{},
+		&Version{},
 	); err != nil {
 		log.Fatal(err.Error())
 	}

@@ -1,13 +1,32 @@
 package models
 
-type Cluster struct {
+type Version struct {
 	Model
-	Namespace     string `gorm:"size:25;unique" json:"namespace" binding:"required"`
-	Registry      string `gorm:"size:25" json:"registry" binding:"required"`
-	Version       string `gorm:"size:25" json:"version" binding:"required"`
-	ServiceSubnet string `gorm:"size:25" json:"serviceSubnet" binding:"required"`
-	PodSubnet     string `gorm:"size:25" json:"PodSubnet" binding:"required"`
-	DnsSvc        string `gorm:"size:25" json:"dnsSvc" binding:"required"`
-	Network       string `gorm:"size:25" json:"network" binding:"required"`
-	ExternalIp    string `gorm:"size:25" json:"externalIp" binding:"required"`
+	Kubernetes    string `gorm:"size:25;unique" json:"Kubernetes" binding:"required"`
+	Etcd          string `gorm:"size:25" json:"Etcd" binding:"required"`
+	Containerd    string `gorm:"size:25" json:"Containerd" binding:"required"`
+	Runc          string `gorm:"size:25" json:"Runc" binding:"required"`
+	Pause         string `gorm:"size:25" json:"Pause" binding:"required"`
+	Coredns       string `gorm:"size:25" json:"Coredns" binding:"required"`
+	MetricsServer string `gorm:"size:25" json:"MetricsServer" binding:"required"`
+}
+
+func (t *Version) Select(k8s string) (v Version, err error) {
+	//err = db.Find(&version).Error
+	err = db.Where("kubernetes = ?", k8s).First(&v).Error
+	//err = db.Where("kubernetes = ?", k8s).Select(&v).Error
+	return
+}
+
+func (t *Version) SelectAll() (version []*Version, err error) {
+	err = db.Find(&version).Error
+	return
+}
+
+func (t *Version) Add(v Version) error {
+	return db.Create(&v).Error
+}
+
+func (t *Version) Del(kubernetes string) error {
+	return db.Where("kubernetes = ?", kubernetes).Delete(&t).Error
 }

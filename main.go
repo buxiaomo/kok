@@ -3,8 +3,10 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
+	"kok/models"
 	"kok/pkg/control"
 	"kok/routers"
+	"os"
 )
 
 func init() {
@@ -15,15 +17,22 @@ func init() {
 	viper.SetDefault("DB_TYPE", "sqlite")
 	viper.SetDefault("WEBHOOK_URL", "http://127.0.0.1:8080")
 	viper.SetDefault("DOMAIN_NAME", "example.com")
+	viper.SetDefault("PROMETHEUS_URL", "http://prometheus.kok.svc:9090")
+	viper.SetDefault("ELASTICSEARCH_URL", "http://elasticsearch.kok.svc:9200")
 
 	viper.AutomaticEnv()
 
-	kok := control.New("")
-	if !kok.HasDefaultSC() {
+	if _, err := os.Stat("./kubeconfig"); err != nil {
+		os.Mkdir("./kubeconfig", 0755)
+	}
+
+	kc := control.New("")
+	if !kc.HasDefaultSC() {
 		panic("cluster not has default storageclass!")
 	}
-	go kok.Node()
-	//version.Version()
+	go kc.ClearPodOnFaultyNode()
+
+	models.ConnectDB(viper.GetString("DB_TYPE"), viper.GetString("DB_URL"))
 }
 
 func main() {

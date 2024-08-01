@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/hashicorp/go-version"
 	"github.com/spf13/viper"
 	"kok/pkg/control"
 	"kok/pkg/utils"
@@ -26,12 +27,15 @@ type install struct {
 	Pkiurl        string
 	Ca            string
 	Key           string
+	KubePorxyArgs string
+	KubeletArgs   string
 }
 
 func NodeInit(c *gin.Context) {
 	name := c.Query("name")
-	kok := control.New("")
-	ns, err := kok.GetNamespace(name)
+	kubeControl := control.New("")
+
+	ns, err := kubeControl.Namespace().Get(name)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
@@ -46,12 +50,9 @@ func NodeInit(c *gin.Context) {
 		return
 	}
 
-	cm, _ := kok.GetConfigMap(name, "pki")
-	fmt.Println()
+	cm, _ := kubeControl.ConfigMaps().Get(ns.Name, "pki")
 
-	//var temp io.Writer
-	buf := new(bytes.Buffer)
-	err = tmpl.Execute(buf, install{
+	info := install{
 		Runc:          ns.Labels["runc"],
 		Containerd:    ns.Labels["containerd"],
 		Registry:      ns.Labels["registry"],
@@ -65,27 +66,20 @@ func NodeInit(c *gin.Context) {
 		Pkiurl:        viper.GetString("PKI_URL"),
 		Ca:            cm.Data["ca.crt"],
 		Key:           cm.Data["ca.key"],
-	})
+	}
+	v1, err := version.NewVersion(ns.Labels["kubernetes"])
+	constraints, err := version.NewConstraint(">= v1.14, < v1.24")
+	if constraints.Check(v1) {
+		info.KubeletArgs = "--container-runtime-endpoint=unix:///run/containerd/containerd.sock --container-runtime=remote"
+	} else {
+		info.KubeletArgs = "--container-runtime-endpoint=unix:///run/containerd/containerd.sock"
+	}
+	buf := new(bytes.Buffer)
+	err = tmpl.Execute(buf, info)
 	if err != nil {
 		panic(err)
 	}
 
-	//tpl, _ := pongo2.FromFile("./install.sh")
-	//ctx := pongo2.Context{
-	//	"runc":         ns.Labels["runc"],
-	//	"containerd":   ns.Labels["containerd"],
-	//	"registry":     ns.Labels["registry"],
-	//	"kubernetes":   ns.Labels["kubernetes"],
-	//	"loadBalancer": ns.Labels["loadBalancer"],
-	//	"clusterDNS":   minIp,
-	//	"pause":        ns.Labels["pause"],
-	//}
-	//out, err := tpl.Execute(ctx)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//
-	//fmt.Println(out)
 	c.String(http.StatusOK, buf.String())
 	return
 }
