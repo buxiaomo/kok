@@ -1,7 +1,7 @@
 apiVersion: v2
 name: calico
 description: support kubernetes v1.18
-
+kubeVersion: ">= 1.18.0 <= 1.18.20"
 # A chart can be either an 'application' or a 'library' chart.
 #
 # Application charts are a collection of templates that can be packaged into versioned archives

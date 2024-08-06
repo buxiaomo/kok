@@ -65,7 +65,7 @@ func plugin(remoteKubeControl *control.Kc, info createInfo, namespace string) {
 		//})
 
 		localAppMarket := appmarket.New("")
-		localAppMarket.Chart().Install(namespace, "event-exporter", "event-exporter", true, "1.7.0", map[string]interface{}{
+		localAppMarket.Chart().Install(namespace, fmt.Sprintf("event-exporter-%s", namespace), "event-exporter", false, "1.7.0", map[string]interface{}{
 			"clusterName": ns.Labels["project"],
 			"stdout": map[string]interface{}{
 				"elasticsearch": map[string]interface{}{
@@ -2451,11 +2451,11 @@ done`,
 						Resources: &applycorev1.ResourceRequirementsApplyConfiguration{
 							Limits: &corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("50m"),
-								corev1.ResourceMemory: resource.MustParse("600Mi"),
+								corev1.ResourceMemory: resource.MustParse("400Mi"),
 							},
 							Requests: &corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("5m"),
-								corev1.ResourceMemory: resource.MustParse("60Mi"),
+								corev1.ResourceMemory: resource.MustParse("40Mi"),
 							},
 						},
 						Ports: []applycorev1.ContainerPortApplyConfiguration{
@@ -2567,6 +2567,9 @@ func ClusterDelete(c *gin.Context) {
 		kubeControl.ServiceAccount().Delete(ns.Name, "prometheus")
 		kubeControl.ConfigMaps().Delete(ns.Name, "prometheus")
 	}
+
+	//am := appmarket.New("")
+	//am.Chart().UnInstall(fmt.Sprintf("event-exporter-%s", namespace))
 
 	kubeControl.Deployment().Delete(ns.Name, "kube-scheduler")
 	kubeControl.Deployment().Delete(ns.Name, "kube-controller-manager")

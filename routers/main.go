@@ -91,7 +91,7 @@ func SetupRouter() *gin.Engine {
 			return
 		}
 
-		err = ioutil.WriteFile(fmt.Sprintf("./kubeconfig/%s.kubeconfig", name), decodedContent, 0666)
+		err = ioutil.WriteFile(fmt.Sprintf("./kubeconfig/%s.kubeconfig", name), decodedContent, 0600)
 		if err != nil {
 			log.Printf("Failed to save file: %v", err)
 			c.String(http.StatusInternalServerError, "Failed to save file")

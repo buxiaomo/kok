@@ -75,10 +75,7 @@ func (app chart) Install(namespace, releaseName, chatName string, GenerateName b
 		client.Namespace = namespace
 		client.IsUpgrade = true
 		client.Force = true
-		if GenerateName == false {
-			client.ReleaseName = releaseName
-		}
-		client.GenerateName = GenerateName
+		client.ReleaseName = releaseName
 		rel, err := client.Run(chart, vals)
 		if err != nil {
 			log.Printf(err.Error())
