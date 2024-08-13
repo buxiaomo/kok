@@ -1,0 +1,105 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "etcd"
+    kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          own_namespace: true
+    scheme: http
+    relabel_configs:
+      - source_labels:
+          [
+            __meta_kubernetes_endpoints_label_app,
+            __meta_kubernetes_endpoint_port_name,
+          ]
+        action: keep
+        regex: etcd;etcd-metrics
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label:  name
+
+  - job_name: "kube-apiserver"
+    kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          own_namespace: true
+    scheme: https
+    authorization:
+      credentials: "{{ .Token }}"
+    tls_config:
+      insecure_skip_verify: true
+    relabel_configs:
+      - source_labels:
+          [
+            __meta_kubernetes_endpoints_label_app,
+            __meta_kubernetes_endpoint_port_name,
+          ]
+        action: keep
+        regex: kube-apiserver;https
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label:  name
+
+  - job_name: "kube-scheduler"
+    kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          own_namespace: true
+    scheme: https
+    authorization:
+      credentials: "{{ .Token }}"
+    tls_config:
+      insecure_skip_verify: true
+    relabel_configs:
+      - source_labels:
+          [
+            __meta_kubernetes_endpoints_label_app,
+            __meta_kubernetes_endpoint_port_name,
+          ]
+        action: keep
+        regex: kube-scheduler;https
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label:  name
+
+  - job_name: "kube-controller-manager"
+    kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          own_namespace: true
+    scheme: https
+    authorization:
+      credentials: "{{ .Token }}"
+    tls_config:
+      insecure_skip_verify: true
+    relabel_configs:
+      - source_labels:
+          [
+            __meta_kubernetes_endpoints_label_app,
+            __meta_kubernetes_endpoint_port_name,
+          ]
+        action: keep
+        regex: kube-controller-manager;https
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label:  name
+remote_write:
+  - url: "{{ .PrometheusUrl }}/api/v1/write"
+    remote_timeout: 30s
+    tls_config:
+      insecure_skip_verify: true
+    queue_config:
+      capacity: 500
+      max_shards: 1000
+      min_shards: 1
+      max_samples_per_send: 100
+      batch_send_deadline: 5s
+      min_backoff: 30ms
+      max_backoff: 100ms

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/kube"
 	"helm.sh/helm/v3/pkg/repo"
 	"log"
-	"os"
 )
 
 type appMark struct {
@@ -17,8 +17,8 @@ type appMark struct {
 
 func New(kubeconfig string) *appMark {
 	actionConfig := new(action.Configuration)
-
-	if err := actionConfig.Init(kube.GetConfig(kubeconfig, "", "kube-system"), "kube-system", os.Getenv("HELM_DRIVER"), func(format string, v ...interface{}) {
+	settings := cli.New()
+	if err := actionConfig.Init(kube.GetConfig(kubeconfig, "", "kube-system"), settings.Namespace(), "secret", func(format string, v ...interface{}) {
 		fmt.Sprintf(format, v)
 	}); err != nil {
 		panic(err.Error())
@@ -44,6 +44,15 @@ type Chart struct {
 	Description string `json:"description"`
 }
 
+func (app chart) Get(chatName string) bool {
+	histClient := action.NewHistory(app.cfg)
+	histClient.Max = 1
+	if _, err := histClient.Run(chatName); err != nil {
+		return false
+	}
+	return true
+}
+
 func (app chart) Search(name string) (chats []Chart) {
 	indexFile, err := repo.LoadIndexFile("./appmarket/assets/index.yaml")
 	if err != nil {
@@ -66,16 +75,14 @@ func (app chart) Install(namespace, releaseName, chatName string, GenerateName b
 		log.Printf(err.Error())
 		return err
 	}
-
 	// 检查 release 是否存在
 	histClient := action.NewHistory(app.cfg)
 	histClient.Max = 1
 	if _, err := histClient.Run(chatName); err != nil {
 		client := action.NewInstall(app.cfg)
-		client.Namespace = namespace
-		client.IsUpgrade = true
-		client.Force = true
+		client.GenerateName = GenerateName
 		client.ReleaseName = releaseName
+		client.Namespace = namespace
 		rel, err := client.Run(chart, vals)
 		if err != nil {
 			log.Printf(err.Error())

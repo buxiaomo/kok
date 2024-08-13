@@ -15,7 +15,6 @@ spec:
         prometheus.io/port: '2112'
         prometheus.io/path: '/metrics'
     spec:
-      serviceAccountName: event-exporter
       securityContext:
         runAsNonRoot: true
       containers:

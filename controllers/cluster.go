@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,6 +25,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"text/template"
 	"time"
 )
 
@@ -59,13 +61,8 @@ func plugin(remoteKubeControl *control.Kc, info createInfo, namespace string) {
 			"clusterIP":    info.DnsSvc,
 		})
 
-		//am.Chart().Install("kube-system", "prometheus", "prometheus", "1.0.0", map[string]interface{}{
-		//	"replicaCount": 0,
-		//	"remoteWrite":  os.Getenv("PROMETHEUS_URL"),
-		//})
-
 		localAppMarket := appmarket.New("")
-		localAppMarket.Chart().Install(namespace, fmt.Sprintf("event-exporter-%s", namespace), "event-exporter", false, "1.7.0", map[string]interface{}{
+		localAppMarket.Chart().Install(namespace, fmt.Sprintf("event-exporter-%s", namespace), "event-exporter", true, "1.7.0", map[string]interface{}{
 			"clusterName": ns.Labels["project"],
 			"stdout": map[string]interface{}{
 				"elasticsearch": map[string]interface{}{
@@ -196,112 +193,26 @@ func ClusterMonitor(c *gin.Context) {
 		panic(err)
 	}
 
+	type info struct {
+		Token         string
+		PrometheusUrl string
+	}
+	tmpl, err := template.ParseFiles("./templates/prometheus.yml")
+	if err != nil {
+		fmt.Println("create template failed, err:", err)
+		return
+	}
+	buf := new(bytes.Buffer)
+	err = tmpl.Execute(buf, info{
+		token,
+		os.Getenv("PROMETHEUS_URL"),
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	cm, _ := kubeControl.ConfigMaps().Apply(name, "prometheus", map[string]string{
-		"prometheus.yml": fmt.Sprintf(`global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
-
-scrape_configs:
-  - job_name: "etcd"
-    kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          own_namespace: true
-    scheme: http
-    relabel_configs:
-      - source_labels:
-          [
-            __meta_kubernetes_endpoints_label_app,
-            __meta_kubernetes_endpoint_port_name,
-          ]
-        action: keep
-        regex: etcd;etcd-metrics
-      - source_labels: [__meta_kubernetes_namespace]
-        target_label: namespace
-      - source_labels: [__meta_kubernetes_pod_name]
-        target_label:  name
-
-  - job_name: "kube-apiserver"
-    kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          own_namespace: true
-    scheme: https
-    authorization:
-      credentials: "%s"
-    tls_config:
-      insecure_skip_verify: true
-    relabel_configs:
-      - source_labels:
-          [
-            __meta_kubernetes_endpoints_label_app,
-            __meta_kubernetes_endpoint_port_name,
-          ]
-        action: keep
-        regex: kube-apiserver;https
-      - source_labels: [__meta_kubernetes_namespace]
-        target_label: namespace
-      - source_labels: [__meta_kubernetes_pod_name]
-        target_label:  name
-
-  - job_name: "kube-scheduler"
-    kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          own_namespace: true
-    scheme: https
-    authorization:
-      credentials: "%s"
-    tls_config:
-      insecure_skip_verify: true
-    relabel_configs:
-      - source_labels:
-          [
-            __meta_kubernetes_endpoints_label_app,
-            __meta_kubernetes_endpoint_port_name,
-          ]
-        action: keep
-        regex: kube-scheduler;https
-      - source_labels: [__meta_kubernetes_namespace]
-        target_label: namespace
-      - source_labels: [__meta_kubernetes_pod_name]
-        target_label:  name
-
-  - job_name: "kube-controller-manager"
-    kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          own_namespace: true
-    scheme: https
-    authorization:
-      credentials: "%s"
-    tls_config:
-      insecure_skip_verify: true
-    relabel_configs:
-      - source_labels:
-          [
-            __meta_kubernetes_endpoints_label_app,
-            __meta_kubernetes_endpoint_port_name,
-          ]
-        action: keep
-        regex: kube-controller-manager;https
-      - source_labels: [__meta_kubernetes_namespace]
-        target_label: namespace
-      - source_labels: [__meta_kubernetes_pod_name]
-        target_label:  name
-remote_write:
-  - url: "%s/api/v1/write"
-    remote_timeout: 30s
-    tls_config:
-      insecure_skip_verify: true
-    queue_config:
-      capacity: 500
-      max_shards: 1000
-      min_shards: 1
-      max_samples_per_send: 100
-      batch_send_deadline: 5s
-      min_backoff: 30ms
-      max_backoff: 100ms`, token, token, token, viper.GetString("PROMETHEUS_URL")),
+		"prometheus.yml": buf.String(),
 	})
 	kubeControl.Deployment().Apply(name, "prometheus", &applyappsv1.DeploymentSpecApplyConfiguration{
 		Replicas: func() *int32 {
@@ -1748,15 +1659,15 @@ done`, etcdSvc.Name, etcdSvc.Namespace),
 								},
 							},
 							TimeoutSeconds: func() *int32 {
-								a := int32(15)
+								a := int32(5)
 								return &a
 							}(),
 							PeriodSeconds: func() *int32 {
-								a := int32(1)
+								a := int32(5)
 								return &a
 							}(),
 							FailureThreshold: func() *int32 {
-								a := int32(3)
+								a := int32(5)
 								return &a
 							}(),
 						},
@@ -2568,8 +2479,10 @@ func ClusterDelete(c *gin.Context) {
 		kubeControl.ConfigMaps().Delete(ns.Name, "prometheus")
 	}
 
-	//am := appmarket.New("")
-	//am.Chart().UnInstall(fmt.Sprintf("event-exporter-%s", namespace))
+	am := appmarket.New("")
+	if am.Chart().Get(fmt.Sprintf("event-exporter-%s", ns.Name)) {
+		am.Chart().UnInstall(fmt.Sprintf("event-exporter-%s", ns.Name))
+	}
 
 	kubeControl.Deployment().Delete(ns.Name, "kube-scheduler")
 	kubeControl.Deployment().Delete(ns.Name, "kube-controller-manager")
