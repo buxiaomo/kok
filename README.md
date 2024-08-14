@@ -43,6 +43,17 @@ helm upgrade -i kok ./kok -n kok --create-namespace \
 Now you can open the link to create the cluster
 * http://\<EXTERNAL-IP\>:8080/console/cluster
 
+## Implemented
+* control-plane deployment
+* add node api
+* control-plane monitoring
+* etcd monitoring
+* coredns monitoring
+* pod monitoring
+* kubelet monitoring
+* kube-proxy monitoring
+* node monitoring
+* cluster event log
 
 ## Layout
 <img src="./img/cluster.png">

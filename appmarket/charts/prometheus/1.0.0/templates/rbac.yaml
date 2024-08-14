@@ -12,7 +12,7 @@ metadata:
   name: application:control-plane:prometheus
 rules:
   - apiGroups: [""]
-    resources: ["pods", "nodes", "nodes/proxy", "services", "endpoints", "pods/log"]
+    resources: ["pods", "nodes", "nodes/proxy", "services", "endpoints", "pods/log", "nodes/metrics"]
     verbs: ["get", "list", "watch"]
   - nonResourceURLs: ["/metrics"]
     verbs: ["get"]

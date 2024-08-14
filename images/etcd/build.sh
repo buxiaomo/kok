@@ -30,3 +30,6 @@ docker push buxiaomo/etcd:3.5.9-0
 
 docker build --build-arg ETCD_VERSION=v3.5.12 -t buxiaomo/etcd:3.5.12-0 .
 docker push buxiaomo/etcd:3.5.12-0
+
+docker build --build-arg ETCD_VERSION=v3.5.15 -t buxiaomo/etcd:3.5.15-0 .
+docker push buxiaomo/etcd:3.5.15-0

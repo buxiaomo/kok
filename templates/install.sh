@@ -664,6 +664,7 @@ ExecStart=/usr/local/bin/kubelet \\
  --anonymous-auth=false \\
  --authorization-mode=Webhook \\
  --allowed-unsafe-sysctls=net.* {{ .KubeletArgs }} \\
+ --authentication-token-webhook=true \\
  --v=1
 
 Restart=on-failure
