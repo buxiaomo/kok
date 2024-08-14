@@ -60,6 +60,9 @@ func plugin(remoteKubeControl *control.Kc, info createInfo, namespace string) {
 			"replicaCount": 1,
 			"clusterIP":    info.DnsSvc,
 		})
+		remoteAppMarket.Chart().Install("kube-system", "kube-state-metrics", "kube-state-metrics", false, ns.Labels["kube-state-metrics"], map[string]interface{}{
+			"replicaCount": 1,
+		})
 
 		localAppMarket := appmarket.New("")
 		localAppMarket.Chart().Install(namespace, fmt.Sprintf("event-exporter-%s", namespace), "event-exporter", true, "1.7.0", map[string]interface{}{
@@ -512,23 +515,24 @@ func ClusterCreate(c *gin.Context) {
 	ns, err := kubeControl.Namespace().Apply(&applymetav1.ObjectMetaApplyConfiguration{
 		Name: &namespace,
 		Labels: map[string]string{
-			"project":        info.Project,
-			"env":            info.Env,
-			"kubernetes":     vinfo.Kubernetes,
-			"etcd":           vinfo.Etcd,
-			"containerd":     vinfo.Containerd,
-			"runc":           vinfo.Runc,
-			"registry":       info.Registry,
-			"nodePort":       info.NodePort,
-			"serviceSubnet":  strings.Replace(info.ServiceCidr, "/", "-", 1),
-			"podSubnet":      strings.Replace(info.PodCidr, "/", "-", 1),
-			"network":        info.Network,
-			"fieldManager":   "control-plane",
-			"networkVersion": info.NetworkVersion,
-			"pause":          vinfo.Pause,
-			"clusterDNS":     clusterDNS,
-			"CoreDNS":        vinfo.Coredns,
-			"metrics-server": vinfo.MetricsServer,
+			"project":            info.Project,
+			"env":                info.Env,
+			"kubernetes":         vinfo.Kubernetes,
+			"etcd":               vinfo.Etcd,
+			"containerd":         vinfo.Containerd,
+			"runc":               vinfo.Runc,
+			"registry":           info.Registry,
+			"nodePort":           info.NodePort,
+			"serviceSubnet":      strings.Replace(info.ServiceCidr, "/", "-", 1),
+			"podSubnet":          strings.Replace(info.PodCidr, "/", "-", 1),
+			"network":            info.Network,
+			"fieldManager":       "control-plane",
+			"networkVersion":     info.NetworkVersion,
+			"pause":              vinfo.Pause,
+			"clusterDNS":         clusterDNS,
+			"CoreDNS":            vinfo.Coredns,
+			"metrics-server":     vinfo.MetricsServer,
+			"kube-state-metrics": vinfo.KubeStateMetrics,
 		},
 	})
 	if err != nil {

@@ -291,6 +291,12 @@
                                                                         <input class="form-control MetricsServer" type="text" id="example-hf-MetricsServer" name="example-hf-name" placeholder="请输入名称..">
                                                                     </div>
                                                                 </div>
+                                                                <div class="form-group">
+                                                                    <label class="col-md-3 control-label" for="example-hf-KubeStateMetrics">kube-state-metrics: </label>
+                                                                    <div class="col-md-9">
+                                                                        <input class="form-control KubeStateMetrics" type="text" id="example-hf-KubeStateMetrics" name="example-hf-name" placeholder="请输入名称..">
+                                                                    </div>
+                                                                </div>
                                                             </form>
                                                         </div>
                                                     </div>
@@ -316,6 +322,7 @@
                                             <th>pause</th>
                                             <th>coredns</th>
                                             <th>metrics-server</th>
+                                            <th>kube-state-metrics</th>
                                             <th>操作</th>
                                         </tr>
                                         </thead>
@@ -329,6 +336,7 @@
                                             <td>{{ .Pause }}</td>
                                             <td>{{ .Coredns }}</td>
                                             <td>{{ .MetricsServer }}</td>
+                                            <td>{{ .KubeStateMetrics }}</td>
                                             <td>
                                                 <div class="btn-group">
                                                     <a class="btn btn-xs btn-default" onclick="DeleteVersion({{ .Kubernetes }});" title="删除" data-toggle="tooltip"><i class="mdi mdi-delete"></i></a>
@@ -409,6 +417,7 @@
             "Pause": $('.Pause').val(),
             "Coredns": $('.Coredns').val(),
             "MetricsServer": $('.MetricsServer').val(),
+            "KubeStateMetrics": $('.KubeStateMetrics').val()
         })
 
         console.log(data);
