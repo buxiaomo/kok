@@ -60,11 +60,7 @@ func kubeApiserverCfg(project, env string) map[string]string {
 [Filter]
     Name    record_modifier
     Match    devops-kube-audit.*
-    Record    clusterName %s
-[Filter]
-    Name    record_modifier
-    Match    devops-kube-audit.*
-    Record    clusterEnv %s
+    Record    clusterName %s-%s
 [Filter]
     Name    modify
     Match    devops-kube-audit.*
@@ -2042,7 +2038,7 @@ done`, etcdSvc.Name, etcdSvc.Namespace),
 						},
 						Resources: &applycorev1.ResourceRequirementsApplyConfiguration{
 							Limits: &corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("150m"),
+								corev1.ResourceCPU:    resource.MustParse("1"),
 								corev1.ResourceMemory: resource.MustParse("2Gi"),
 							},
 							Requests: &corev1.ResourceList{
