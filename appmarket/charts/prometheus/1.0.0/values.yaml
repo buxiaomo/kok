@@ -5,3 +5,6 @@
 replicaCount: 0
   
 remoteWrite: "http://172.16.254.1:9090"
+
+clusterName: demo
+clusterEnv: dev

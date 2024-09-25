@@ -1,7 +1,7 @@
 apiVersion: v2
 name: kube-state-metrics
 description: support kubernetes v1.17 - v1.18
-kubeVersion: "1.17.X"
+kubeVersion: ">= 1.17.* <= 1.18.*"
 
 # A chart can be either an 'application' or a 'library' chart.
 #

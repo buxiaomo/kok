@@ -1,5 +1,5 @@
 #!/bin/sh
-set -ex
+set -x
 export HOSTNAME=$(hostname)
 export ID=${HOSTNAME##*[^0-9]}
 export ETCDCTL_API=3
@@ -29,42 +29,49 @@ export ETCD_ARGS="--name=${HOSTNAME} \
 
 ETCD_ENDPOINTS() {
     EPS=""
-    for i in $(seq 0 $((${MEMBER_COUNT} - 1))); do
+    for i in $(seq 0 $((${MEMBER_COUNT} - ${ID}))); do
         EPS="${EPS}${EPS:+,}https://etcd-${i}.etcd.${NAMESPACE}:2379"
     done
     echo ${EPS}
 }
 
-if [ ! -f /etc/kubernetes/pki/etcd/.etcd_member_count ];then
-  echo "MEMBER_NUMBER=${MEMBER_COUNT}" > /etc/kubernetes/pki/etcd/.etcd_member_count
+if [ -f /var/lib/cache/start ]; then
+  /var/lib/cache/start
 fi
 
-if [ -e /etc/kubernetes/pki/etcd/.envs ]; then
-    source /etc/kubernetes/pki/etcd/.envs
-    exec /usr/local/bin/etcd \
+if [ ! -f /var/lib/cache/etcd_member_count ];then
+  echo "MEMBER_NUMBER=${MEMBER_COUNT}" > /var/lib/cache/etcd_member_count
+fi
+
+if [ -f /var/lib/cache/envs ]; then
+    source /var/lib/cache/envs
+    echo exec /usr/local/bin/etcd \
         --initial-cluster=${ETCD_INITIAL_CLUSTER} \
         --initial-cluster-state=${ETCD_INITIAL_CLUSTER_STATE} \
-        --initial-advertise-peer-urls=${ETCD_INITIAL_ADVERTISE_PEER_URLS} ${ETCD_ARGS}
+        --initial-advertise-peer-urls=${ETCD_INITIAL_ADVERTISE_PEER_URLS} ${ETCD_ARGS} > /var/lib/cache/start
 else
     if [ -d /var/lib/etcd/member ]; then
-        exec /usr/local/bin/etcd \
+        echo exec /usr/local/bin/etcd \
             --initial-cluster=${HOSTNAME}=https://${HOSTNAME}.etcd.${NAMESPACE}:2380 \
             --initial-cluster-state=new \
-            --initial-advertise-peer-urls=https://${HOSTNAME}.etcd.${NAMESPACE}:2380 ${ETCD_ARGS}
+            --initial-advertise-peer-urls=https://${HOSTNAME}.etcd.${NAMESPACE}:2380 ${ETCD_ARGS} > /var/lib/cache/start
     else
         if [ ${ID} -eq 0 ]; then
-            exec /usr/local/bin/etcd \
+            echo exec /usr/local/bin/etcd \
                 --initial-cluster=${HOSTNAME}=https://${HOSTNAME}.etcd.${NAMESPACE}:2380 \
                 --initial-cluster-state=new \
-                --initial-advertise-peer-urls=https://${HOSTNAME}.etcd.${NAMESPACE}:2380 ${ETCD_ARGS}
+                --initial-advertise-peer-urls=https://${HOSTNAME}.etcd.${NAMESPACE}:2380 ${ETCD_ARGS} > /var/lib/cache/start
         fi
 
         echo "Adding ${HOSTNAME} from etcd cluster"
-        etcdctl --endpoints $(ETCD_ENDPOINTS) ${ETCD_CERT} member add ${HOSTNAME} --peer-urls=https://${HOSTNAME}.etcd.${NAMESPACE}:2380 | grep "^ETCD_" >/etc/kubernetes/pki/etcd/.envs
-        source /etc/kubernetes/pki/etcd/.envs
-        exec /usr/local/bin/etcd \
+        etcdctl --endpoints https://etcd-0.etcd.${NAMESPACE}:2379 ${ETCD_CERT} member add ${HOSTNAME} --peer-urls=https://${HOSTNAME}.etcd.${NAMESPACE}:2380 | grep "^ETCD_" >/var/lib/cache/envs
+        source /var/lib/cache/envs
+        echo exec /usr/local/bin/etcd \
             --initial-cluster=${ETCD_INITIAL_CLUSTER} \
             --initial-cluster-state=${ETCD_INITIAL_CLUSTER_STATE} \
-            --initial-advertise-peer-urls=${ETCD_INITIAL_ADVERTISE_PEER_URLS} ${ETCD_ARGS}
+            --initial-advertise-peer-urls=${ETCD_INITIAL_ADVERTISE_PEER_URLS} ${ETCD_ARGS} > /var/lib/cache/start
     fi
 fi
+
+chmod +x /var/lib/cache/start
+/var/lib/cache/start

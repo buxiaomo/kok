@@ -17,8 +17,10 @@ import (
 	applycorev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	applymetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	applyrbacv1 "k8s.io/client-go/applyconfigurations/rbac/v1"
+	"k8s.io/client-go/rest"
 	db "kok/models"
 	"kok/pkg/appmarket"
+	"kok/pkg/cert"
 	"kok/pkg/control"
 	"kok/pkg/utils"
 	"log"
@@ -28,6 +30,61 @@ import (
 	"text/template"
 	"time"
 )
+
+func kubeApiserverCfg() map[string]string {
+	return map[string]string{
+		"encryption-config.yaml": `kind: EncryptionConfig
+apiVersion: v1
+resources:
+  - resources:
+      - secrets
+    providers:
+      - aescbc:
+          keys:
+            - name: key1
+              secret: Tsg7sO4Ki/W3s9bfwGfTi8ECcp+/3uDedQMq6rLQTIY=
+      - identity: {}`,
+		"audit-policy-minimal.yaml": `apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+  # Do not log from kube-system accounts
+  - level: None
+    userGroups:
+      - system:serviceaccounts:kube-system
+  - level: None
+    users:
+      - system:apiserver
+      - system:kube-scheduler
+      - system:volume-scheduler
+      - system:kube-controller-manager
+      - system:node
+
+  # Do not log from collector
+  - level: None
+    users:
+      - system:serviceaccount:collectorforkubernetes:collectorforkubernetes
+
+  # Don't log nodes communications
+  - level: None
+    userGroups:
+      - system:nodes
+
+  # Don't log these read-only URLs.
+  - level: None
+    nonResourceURLs:
+      - /healthz*
+      - /version
+      - /swagger*
+
+  # Log configmap and secret changes in all namespaces at the metadata level.
+  - level: Metadata
+    resources:
+      - resources: ["secrets", "configmaps"]
+
+  # A catch-all rule to log all other requests at the request level.
+  - level: Request`,
+	}
+}
 
 func plugin(remoteKubeControl *control.Kc, info createInfo, namespace string) {
 	err := waitForClusterReady(remoteKubeControl, namespace)
@@ -65,11 +122,12 @@ func plugin(remoteKubeControl *control.Kc, info createInfo, namespace string) {
 		})
 
 		localAppMarket := appmarket.New("")
-		localAppMarket.Chart().Install(namespace, fmt.Sprintf("event-exporter-%s", namespace), "event-exporter", true, "1.7.0", map[string]interface{}{
+		localAppMarket.Chart().Install(namespace, fmt.Sprintf("event-exporter-%s", namespace), "event-exporter", false, "1.7.0", map[string]interface{}{
 			"clusterName": ns.Labels["project"],
+			"clusterEnv":  ns.Labels["env"],
 			"stdout": map[string]interface{}{
 				"elasticsearch": map[string]interface{}{
-					"hosts":       []string{os.Getenv("ELASTICSEARCH_URL")},
+					"hosts":       []string{viper.GetString("ELASTICSEARCH_URL")},
 					"index":       "devops-kube-event",
 					"indexFormat": "devops-kube-event-{2006.01.02}",
 				},
@@ -107,16 +165,22 @@ func waitForClusterReady(kubeControl *control.Kc, namespace string) (err error) 
 }
 
 func ClusterMonitor(c *gin.Context) {
-	name := c.Query("name")
 	var token string
+	name := c.Query("name")
 
-	am := appmarket.New(fmt.Sprintf("./kubeconfig/%s.kubeconfig", name))
-	am.Chart().Install("kube-system", "prometheus", "prometheus", false, "1.0.0", map[string]interface{}{
+	localkubeControl := control.New("")
+	remoteKubeControl := control.New(fmt.Sprintf("./kubeconfig/%s.kubeconfig", name))
+
+	ns, err := localkubeControl.Namespace().Get(name)
+
+	remoteAppMarket := appmarket.New(fmt.Sprintf("./kubeconfig/%s.kubeconfig", name))
+	remoteAppMarket.Chart().Install("kube-system", "prometheus", "prometheus", false, "1.0.0", map[string]interface{}{
 		"replicaCount": 1,
-		"remoteWrite":  os.Getenv("PROMETHEUS_URL"),
+		"remoteWrite":  viper.GetString("PROMETHEUS_URL"),
+		"clusterName":  ns.Labels["project"],
+		"clusterEnv":   ns.Labels["env"],
 	})
 
-	remoteKubeControl := control.New(fmt.Sprintf("./kubeconfig/%s.kubeconfig", name))
 	sa, err := remoteKubeControl.ServiceAccount().Get("kube-system", "prometheus")
 	if err != nil {
 		panic(err)
@@ -136,13 +200,12 @@ func ClusterMonitor(c *gin.Context) {
 		token = string(sc.Data["token"])
 	}
 
-	kubeControl := control.New("")
-	prometheusSA, err := kubeControl.ServiceAccount().Apply(name, "prometheus")
+	prometheusSA, err := localkubeControl.ServiceAccount().Apply(name, "prometheus")
 	if err != nil {
 		panic(err)
 	}
 
-	cr, err := kubeControl.ClusterRoles().Apply(fmt.Sprintf("application:control-plane:%s:prometheus", name), []applyrbacv1.PolicyRuleApplyConfiguration{
+	cr, err := localkubeControl.ClusterRoles().Apply(fmt.Sprintf("application:control-plane:%s:prometheus", name), []applyrbacv1.PolicyRuleApplyConfiguration{
 		{
 			Verbs: []string{
 				"get",
@@ -172,7 +235,7 @@ func ClusterMonitor(c *gin.Context) {
 		panic(err)
 	}
 
-	_, err = kubeControl.ClusterRoleBindings().Apply(fmt.Sprintf("application:control-plane:%s:prometheus", name), []applyrbacv1.SubjectApplyConfiguration{
+	_, err = localkubeControl.ClusterRoleBindings().Apply(fmt.Sprintf("application:control-plane:%s:prometheus", name), []applyrbacv1.SubjectApplyConfiguration{
 		{
 			Kind: func() *string {
 				name := "ServiceAccount"
@@ -199,6 +262,8 @@ func ClusterMonitor(c *gin.Context) {
 	type info struct {
 		Token         string
 		PrometheusUrl string
+		ClusterName   string
+		ClusterEnv    string
 	}
 	tmpl, err := template.ParseFiles("./templates/prometheus.yml")
 	if err != nil {
@@ -208,16 +273,18 @@ func ClusterMonitor(c *gin.Context) {
 	buf := new(bytes.Buffer)
 	err = tmpl.Execute(buf, info{
 		token,
-		os.Getenv("PROMETHEUS_URL"),
+		viper.GetString("PROMETHEUS_URL"),
+		ns.Labels["project"],
+		ns.Labels["env"],
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	cm, _ := kubeControl.ConfigMaps().Apply(name, "prometheus", map[string]string{
+	cm, _ := localkubeControl.ConfigMaps().Apply(name, "prometheus", map[string]string{
 		"prometheus.yml": buf.String(),
 	})
-	kubeControl.Deployment().Apply(name, "prometheus", &applyappsv1.DeploymentSpecApplyConfiguration{
+	localkubeControl.Deployment().Apply(name, "prometheus", &applyappsv1.DeploymentSpecApplyConfiguration{
 		Replicas: func() *int32 {
 			mode := int32(1)
 			return &mode
@@ -375,6 +442,32 @@ func ClusterMonitor(c *gin.Context) {
 			},
 		},
 	})
+	localkubeControl.Service().Apply(name, "prometheus", &applycorev1.ServiceSpecApplyConfiguration{
+		Ports: []applycorev1.ServicePortApplyConfiguration{
+			{
+				Name: func() *string {
+					v := "http"
+					return &v
+				}(),
+				Port: func() *int32 {
+					v := int32(9090)
+					return &v
+				}(),
+				TargetPort: &intstr.IntOrString{
+					Type:   0,
+					IntVal: 9090,
+					StrVal: "9090",
+				},
+			},
+		},
+		Selector: map[string]string{
+			"app": "prometheus",
+		},
+		Type: func() *corev1.ServiceType {
+			v := corev1.ServiceTypeClusterIP
+			return &v
+		}(),
+	})
 
 	// patch namespace set enable prometheus
 	patchBytes, _ := json.Marshal(map[string]interface{}{
@@ -384,7 +477,7 @@ func ClusterMonitor(c *gin.Context) {
 			},
 		},
 	})
-	kubeControl.Namespace().Patch(name, types.MergePatchType, patchBytes)
+	localkubeControl.Namespace().Patch(name, types.MergePatchType, patchBytes)
 	c.JSON(http.StatusOK, gin.H{})
 }
 
@@ -495,7 +588,6 @@ type createInfo struct {
 }
 
 func ClusterCreate(c *gin.Context) {
-
 	var (
 		info   createInfo
 		lbAddr string
@@ -613,6 +705,487 @@ func ClusterCreate(c *gin.Context) {
 	})
 	kubeControl.Namespace().Patch(ns.Name, types.MergePatchType, patchBytes)
 
+	// ca configmap
+	var clusterCa *corev1.ConfigMap
+	clusterCa, err = kubeControl.ConfigMaps().Get(ns.Name, "cluster-ca")
+	if err != nil {
+		pki := cert.New()
+		tl := pki.GenerateAll(10, info.Project, info.Env, lbAddr, clusterDNS)
+		clusterCa, err = kubeControl.ConfigMaps().Apply(ns.Name, "cluster-ca", map[string]string{
+			"sa.pub":                       tl.SaPub,
+			"sa.key":                       tl.SaKey,
+			"ca.crt":                       tl.CaCrt,
+			"ca.key":                       tl.CaKey,
+			"apiserver.crt":                tl.ApiServerCrt,
+			"apiserver.key":                tl.ApiServerKey,
+			"apiserver-kubelet-client.crt": tl.ApiserverKubeletClientCrt,
+			"apiserver-kubelet-client.key": tl.ApiserverKubeletClientKey,
+			"apiserver-etcd-client.crt":    tl.ApiserverEtcdClientCrt,
+			"apiserver-etcd-client.key":    tl.ApiserverEtcdClientKey,
+			"kube-controller-manager.crt":  tl.ControllerManagerCrt,
+			"kube-controller-manager.key":  tl.ControllerManagerKey,
+			"kube-scheduler.crt":           tl.SchedulerCrt,
+			"kube-scheduler.key":           tl.SchedulerKey,
+			"admin.crt":                    tl.AdminCrt,
+			"admin.key":                    tl.AdminKey,
+			"etcd.crt":                     tl.EtcdCrt,
+			"etcd.key":                     tl.EtcdKey,
+			"etcd-server.crt":              tl.EtcdServerCrt,
+			"etcd-server.key":              tl.EtcdServerKey,
+			"etcd-peer.crt":                tl.EtcdPeerCrt,
+			"etcd-peer.key":                tl.EtcdPeerKey,
+			"etcd-healthcheck-client.crt":  tl.EtcdHealthcheckClientCrt,
+			"etcd-healthcheck-client.key":  tl.EtcdHealthcheckClientKey,
+			"front-proxy-ca.crt":           tl.FrontProxyCrt,
+			"front-proxy-ca.key":           tl.FrontProxyKey,
+			"front-proxy-client.crt":       tl.FrontProxyClientCrt,
+			"front-proxy-client.key":       tl.FrontProxyClientKey,
+		})
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	kubeconfig, err := cert.CreateKubeconfigFileForRestConfig(rest.Config{
+		Host: fmt.Sprintf("https://%s:6443", lbAddr),
+		TLSClientConfig: rest.TLSClientConfig{
+			Insecure: false,
+			CAData:   []byte(clusterCa.Data["ca.crt"]),
+			CertData: []byte(clusterCa.Data["admin.crt"]),
+			KeyData:  []byte(clusterCa.Data["admin.key"]),
+		},
+	}, fmt.Sprintf("./kubeconfig/%s-%s.kubeconfig", info.Project, info.Env))
+
+	kubeControl.ConfigMaps().Apply(ns.Name, "remote-access", map[string]string{
+		"remote-access.kubeconfig": string(kubeconfig),
+	})
+
+	volumeMount := []applycorev1.VolumeMountApplyConfiguration{
+		// sa pub
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/sa.pub"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "sa.pub"
+				return &v
+			}(),
+		},
+		// sa key
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/sa.key"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "sa.key"
+				return &v
+			}(),
+		},
+		// k8s ca crt
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/ca.crt"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "ca.crt"
+				return &v
+			}(),
+		},
+		// k8s ca key
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/ca.key"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "ca.key"
+				return &v
+			}(),
+		},
+
+		// k8s apiserver crt
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/apiserver.crt"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "apiserver.crt"
+				return &v
+			}(),
+		},
+		// k8s apiserver key
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/apiserver.key"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "apiserver.key"
+				return &v
+			}(),
+		},
+
+		// k8s apiserver-kubelet-client crt
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/apiserver-kubelet-client.crt"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "apiserver-kubelet-client.crt"
+				return &v
+			}(),
+		},
+		// k8s apiserver-kubelet-client key
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/apiserver-kubelet-client.key"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "apiserver-kubelet-client.key"
+				return &v
+			}(),
+		},
+
+		// k8s apiserver-etcd-client crt
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/apiserver-etcd-client.crt"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "apiserver-etcd-client.crt"
+				return &v
+			}(),
+		},
+		// k8s apiserver-etcd-client key
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/apiserver-etcd-client.key"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "apiserver-etcd-client.key"
+				return &v
+			}(),
+		},
+
+		// k8s kube-controller-manager crt
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/kube-controller-manager.crt"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "kube-controller-manager.crt"
+				return &v
+			}(),
+		},
+		// k8s kube-controller-manager key
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/kube-controller-manager.key"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "kube-controller-manager.key"
+				return &v
+			}(),
+		},
+
+		// k8s kube-scheduler crt
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/kube-scheduler.crt"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "kube-scheduler.crt"
+				return &v
+			}(),
+		},
+		// k8s kube-scheduler key
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/kube-scheduler.key"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "kube-scheduler.key"
+				return &v
+			}(),
+		},
+
+		// front-proxy ca crt
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/front-proxy-ca.crt"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "front-proxy-ca.crt"
+				return &v
+			}(),
+		},
+		// front-proxy ca key
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/front-proxy-ca.key"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "front-proxy-ca.key"
+				return &v
+			}(),
+		},
+		// front-proxy client crt
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/front-proxy-client.crt"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "front-proxy-client.crt"
+				return &v
+			}(),
+		},
+		// front-proxy client key
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/front-proxy-client.key"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "front-proxy-client.key"
+				return &v
+			}(),
+		},
+
+		// etcd ca crt
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/etcd/ca.crt"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "etcd.crt"
+				return &v
+			}(),
+		},
+		// etcd ca key
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/etcd/ca.key"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "etcd.key"
+				return &v
+			}(),
+		},
+		// etcd server crt
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/etcd/server.crt"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "etcd-server.crt"
+				return &v
+			}(),
+		},
+		// etcd server key
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/etcd/server.key"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "etcd-server.key"
+				return &v
+			}(),
+		},
+		// etcd peer crt
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/etcd/peer.crt"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "etcd-peer.crt"
+				return &v
+			}(),
+		},
+		// etcd peer key
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/etcd/peer.key"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "etcd-peer.key"
+				return &v
+			}(),
+		},
+		// etcd healthcheck-client crt
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/etcd/healthcheck-client.crt"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "etcd-healthcheck-client.crt"
+				return &v
+			}(),
+		},
+		// etcd healthcheck-client key
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/etcd/healthcheck-client.key"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "etcd-healthcheck-client.key"
+				return &v
+			}(),
+		},
+	}
+
 	// etcd sa
 	etcdSA, err := kubeControl.ServiceAccount().Apply(ns.Name, "etcd")
 	if err != nil {
@@ -669,21 +1242,6 @@ func ClusterCreate(c *gin.Context) {
 			return &name
 		}(),
 		Name: &etcdRole.Name,
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	// pki pvc
-	pkiPvc, err := kubeControl.Pvc().Apply(ns.Name, "pki-vol", &applycorev1.PersistentVolumeClaimSpecApplyConfiguration{
-		AccessModes: []corev1.PersistentVolumeAccessMode{
-			corev1.ReadWriteMany,
-		},
-		Resources: &applycorev1.VolumeResourceRequirementsApplyConfiguration{
-			Requests: &corev1.ResourceList{
-				corev1.ResourceStorage: resource.MustParse("1G"),
-			},
-		},
 	})
 	if err != nil {
 		panic(err)
@@ -752,6 +1310,34 @@ func ClusterCreate(c *gin.Context) {
 	}
 
 	// etcd sts
+	etcdvolumeMount := append(volumeMount, applycorev1.VolumeMountApplyConfiguration{
+		Name: func() *string {
+			name := "etcd-vol"
+			return &name
+		}(),
+		MountPath: func() *string {
+			name := "/var/lib/etcd"
+			return &name
+		}(),
+		SubPath: func() *string {
+			name := "data"
+			return &name
+		}(),
+	})
+	etcdvolumeMount = append(volumeMount, applycorev1.VolumeMountApplyConfiguration{
+		Name: func() *string {
+			v := "etcd-vol"
+			return &v
+		}(),
+		MountPath: func() *string {
+			v := "/var/lib/cache"
+			return &v
+		}(),
+		SubPath: func() *string {
+			v := "cache"
+			return &v
+		}(),
+	})
 	_, err = kubeControl.StatefulSets().Apply(ns.Name, "etcd", &applyappsv1.StatefulSetSpecApplyConfiguration{
 		ServiceName: &etcdSvc.Name,
 		Replicas: func() *int32 {
@@ -817,143 +1403,19 @@ func ClusterCreate(c *gin.Context) {
 					},
 				},
 				Volumes: []applycorev1.VolumeApplyConfiguration{
+					// cluster ca configmap
 					{
-						Name: func() *string {
-							name := "pki-vol"
-							return &name
-						}(),
+						Name: &clusterCa.Name,
 						VolumeSourceApplyConfiguration: applycorev1.VolumeSourceApplyConfiguration{
-							PersistentVolumeClaim: &applycorev1.PersistentVolumeClaimVolumeSourceApplyConfiguration{
-								ClaimName: &pkiPvc.Name,
-							},
-						},
-					},
-				},
-				InitContainers: []applycorev1.ContainerApplyConfiguration{
-					{
-						Name: func() *string {
-							v := "init-pki"
-							return &v
-						}(),
-						Image: func() *string {
-							v := "buxiaomo/kube-pki:1.0.3"
-							//v := "buxiaomo/openssl:3.3.1"
-							return &v
-						}(),
-						ImagePullPolicy: func() *corev1.PullPolicy {
-							v := corev1.PullAlways
-							return &v
-						}(),
-						VolumeMounts: []applycorev1.VolumeMountApplyConfiguration{
-							{
-								Name: &pkiPvc.Name,
-								MountPath: func() *string {
-									v := "/etc/kubernetes/pki"
-									return &v
-								}(),
-							},
-						},
-						Env: []applycorev1.EnvVarApplyConfiguration{
-							{
-								Name: func() *string {
-									v := "EXTERNAL_IP"
-									return &v
-								}(),
-								Value: &lbAddr,
-							},
-							{
-								Name: func() *string {
-									v := "PROJECT"
-									return &v
-								}(),
-								Value: func() *string {
-									v := ns.Labels["project"]
-									return &v
-								}(),
-							},
-							{
-								Name: func() *string {
-									v := "ENV"
-									return &v
-								}(),
-								Value: func() *string {
-									v := ns.Labels["env"]
-									return &v
-								}(),
-							},
-							{
-								Name: func() *string {
-									v := "WEBHOOK_URL"
-									return &v
-								}(),
-								Value: func() *string {
-									v := viper.GetString("WEBHOOK_URL")
-									return &v
-								}(),
-							},
-							{
-								Name: func() *string {
-									v := "NAMESPACE"
-									return &v
-								}(),
-								ValueFrom: &applycorev1.EnvVarSourceApplyConfiguration{
-									FieldRef: &applycorev1.ObjectFieldSelectorApplyConfiguration{
-										FieldPath: func() *string {
-											v := "metadata.namespace"
-											return &v
-										}(),
-									},
+							ConfigMap: &applycorev1.ConfigMapVolumeSourceApplyConfiguration{
+								LocalObjectReferenceApplyConfiguration: applycorev1.LocalObjectReferenceApplyConfiguration{
+									Name: &clusterCa.Name,
 								},
-							},
-							{
-								Name: func() *string {
-									v := "CLUSTERDNS"
-									return &v
-								}(),
-								Value: &clusterDNS,
-							},
-						},
-					},
-					{
-						Name: func() *string {
-							v := "cp-pki"
-							return &v
-						}(),
-						Image: func() *string {
-							v := "alpine:3.20.1"
-							return &v
-						}(),
-						ImagePullPolicy: func() *corev1.PullPolicy {
-							v := corev1.PullAlways
-							return &v
-						}(),
-						VolumeMounts: []applycorev1.VolumeMountApplyConfiguration{
-							{
-								Name: func() *string {
-									v := "etcd-vol"
-									return &v
-								}(),
-								MountPath: func() *string {
-									v := "/etc/kubernetes/pki/etcd"
-									return &v
-								}(),
-								SubPath: func() *string {
-									v := "pki-vol"
+								DefaultMode: func() *int32 {
+									v := int32(0755)
 									return &v
 								}(),
 							},
-							{
-								Name: &pkiPvc.Name,
-								MountPath: func() *string {
-									v := "/mnt/pki-vol"
-									return &v
-								}(),
-							},
-						},
-						Command: []string{
-							"sh",
-							"-xc",
-							"cp -vfr /mnt/pki-vol/etcd/* /etc/kubernetes/pki/etcd",
 						},
 					},
 				},
@@ -1092,36 +1554,7 @@ func ClusterCreate(c *gin.Context) {
 								corev1.ResourceMemory: resource.MustParse("70Mi"),
 							},
 						},
-						VolumeMounts: []applycorev1.VolumeMountApplyConfiguration{
-							{
-								Name: func() *string {
-									name := "etcd-vol"
-									return &name
-								}(),
-								MountPath: func() *string {
-									name := "/var/lib/etcd"
-									return &name
-								}(),
-								SubPath: func() *string {
-									name := "data-vol"
-									return &name
-								}(),
-							},
-							{
-								Name: func() *string {
-									v := "etcd-vol"
-									return &v
-								}(),
-								MountPath: func() *string {
-									name := "/etc/kubernetes/pki/etcd"
-									return &name
-								}(),
-								SubPath: func() *string {
-									name := "pki-vol"
-									return &name
-								}(),
-							},
-						},
+						VolumeMounts: etcdvolumeMount,
 						Env: []applycorev1.EnvVarApplyConfiguration{
 							{
 								Name: func() *string {
@@ -1251,63 +1684,36 @@ func ClusterCreate(c *gin.Context) {
 	}
 
 	// kube-apiserver cm
-	kubeApiserverCM, err := kubeControl.ConfigMaps().Apply(ns.Name, "kube-apiserver", map[string]string{
-		"encryption-config.yaml": `kind: EncryptionConfig
-apiVersion: v1
-resources:
-  - resources:
-      - secrets
-    providers:
-      - aescbc:
-          keys:
-            - name: key1
-              secret: Tsg7sO4Ki/W3s9bfwGfTi8ECcp+/3uDedQMq6rLQTIY=
-      - identity: {}`,
-		"audit-policy-minimal.yaml": `apiVersion: audit.k8s.io/v1
-kind: Policy
-rules:
-  # Do not log from kube-system accounts
-  - level: None
-    userGroups:
-      - system:serviceaccounts:kube-system
-  - level: None
-    users:
-      - system:apiserver
-      - system:kube-scheduler
-      - system:volume-scheduler
-      - system:kube-controller-manager
-      - system:node
-
-  # Do not log from collector
-  - level: None
-    users:
-      - system:serviceaccount:collectorforkubernetes:collectorforkubernetes
-
-  # Don't log nodes communications
-  - level: None
-    userGroups:
-      - system:nodes
-
-  # Don't log these read-only URLs.
-  - level: None
-    nonResourceURLs:
-      - /healthz*
-      - /version
-      - /swagger*
-
-  # Log configmap and secret changes in all namespaces at the metadata level.
-  - level: Metadata
-    resources:
-      - resources: ["secrets", "configmaps"]
-
-  # A catch-all rule to log all other requests at the request level.
-  - level: Request`,
-	})
+	// todo add
+	kubeApiserverCM, err := kubeControl.ConfigMaps().Apply(ns.Name, "kube-apiserver", kubeApiserverCfg())
 	if err != nil {
 		panic(err)
 	}
 
 	// kube-apiserver deployment
+	apiservervolumeMount := append(volumeMount, applycorev1.VolumeMountApplyConfiguration{
+		Name: &kubeApiserverCM.Name,
+		MountPath: func() *string {
+			v := "/etc/kubernetes/encryption-config.yaml"
+			return &v
+		}(),
+		SubPath: func() *string {
+			v := "encryption-config.yaml"
+			return &v
+		}(),
+	})
+	apiservervolumeMount = append(apiservervolumeMount, applycorev1.VolumeMountApplyConfiguration{
+		Name: &kubeApiserverCM.Name,
+		MountPath: func() *string {
+			v := "/etc/kubernetes/audit-policy-minimal.yaml"
+			return &v
+		}(),
+		SubPath: func() *string {
+			v := "audit-policy-minimal.yaml"
+			return &v
+		}(),
+	})
+
 	_, err = kubeControl.Deployment().Apply(ns.Name, "kube-apiserver", &applyappsv1.DeploymentSpecApplyConfiguration{
 		Replicas: func() *int32 {
 			mode := int32(1)
@@ -1440,20 +1846,6 @@ rules:
 				Volumes: []applycorev1.VolumeApplyConfiguration{
 					{
 						Name: func() *string {
-							a := "pki-vol"
-							return &a
-						}(),
-						VolumeSourceApplyConfiguration: applycorev1.VolumeSourceApplyConfiguration{
-							PersistentVolumeClaim: &applycorev1.PersistentVolumeClaimVolumeSourceApplyConfiguration{
-								ClaimName: func() *string {
-									a := "pki-vol"
-									return &a
-								}(),
-							},
-						},
-					},
-					{
-						Name: func() *string {
 							a := "kube-apiserver"
 							return &a
 						}(),
@@ -1465,6 +1857,20 @@ rules:
 								DefaultMode: func() *int32 {
 									a := int32(0755)
 									return &a
+								}(),
+							},
+						},
+					},
+					{
+						Name: &clusterCa.Name,
+						VolumeSourceApplyConfiguration: applycorev1.VolumeSourceApplyConfiguration{
+							ConfigMap: &applycorev1.ConfigMapVolumeSourceApplyConfiguration{
+								LocalObjectReferenceApplyConfiguration: applycorev1.LocalObjectReferenceApplyConfiguration{
+									Name: &clusterCa.Name,
+								},
+								DefaultMode: func() *int32 {
+									v := int32(0755)
+									return &v
 								}(),
 							},
 						},
@@ -1594,37 +2000,7 @@ done`, etcdSvc.Name, etcdSvc.Namespace),
 								}(),
 							},
 						},
-						VolumeMounts: []applycorev1.VolumeMountApplyConfiguration{
-							{
-								Name: &pkiPvc.Name,
-								MountPath: func() *string {
-									a := "/etc/kubernetes/pki"
-									return &a
-								}(),
-							},
-							{
-								Name: &kubeApiserverCM.Name,
-								MountPath: func() *string {
-									v := "/etc/kubernetes/encryption-config.yaml"
-									return &v
-								}(),
-								SubPath: func() *string {
-									v := "encryption-config.yaml"
-									return &v
-								}(),
-							},
-							{
-								Name: &kubeApiserverCM.Name,
-								MountPath: func() *string {
-									v := "/etc/kubernetes/audit-policy-minimal.yaml"
-									return &v
-								}(),
-								SubPath: func() *string {
-									v := "audit-policy-minimal.yaml"
-									return &v
-								}(),
-							},
-						},
+						VolumeMounts: apiservervolumeMount,
 						LivenessProbe: &applycorev1.ProbeApplyConfiguration{
 							ProbeHandlerApplyConfiguration: applycorev1.ProbeHandlerApplyConfiguration{
 								TCPSocket: &applycorev1.TCPSocketActionApplyConfiguration{
@@ -1780,6 +2156,21 @@ users:
 	}
 
 	// kube-controller-manager deployment
+	controllermanagervolumeMount := append(volumeMount, applycorev1.VolumeMountApplyConfiguration{
+		Name: &kubeconfigCM.Name,
+		MountPath: func() *string {
+			v := "/etc/kubernetes/kube-controller-manager.kubeconfig"
+			return &v
+		}(),
+		SubPath: func() *string {
+			v := "kube-controller-manager.kubeconfig"
+			return &v
+		}(),
+		ReadOnly: func() *bool {
+			v := true
+			return &v
+		}(),
+	})
 	_, err = kubeControl.Deployment().Apply(ns.Name, "kube-controller-manager", &applyappsv1.DeploymentSpecApplyConfiguration{
 		Replicas: func() *int32 {
 			mode := int32(1)
@@ -1843,7 +2234,6 @@ users:
 					},
 				},
 				Affinity: &applycorev1.AffinityApplyConfiguration{
-
 					PodAntiAffinity: &applycorev1.PodAntiAffinityApplyConfiguration{
 						PreferredDuringSchedulingIgnoredDuringExecution: []applycorev1.WeightedPodAffinityTermApplyConfiguration{
 							{
@@ -1912,30 +2302,27 @@ users:
 				},
 				Volumes: []applycorev1.VolumeApplyConfiguration{
 					{
-						Name: func() *string {
-							a := "pki-vol"
-							return &a
-						}(),
-						VolumeSourceApplyConfiguration: applycorev1.VolumeSourceApplyConfiguration{
-							PersistentVolumeClaim: &applycorev1.PersistentVolumeClaimVolumeSourceApplyConfiguration{
-								ClaimName: func() *string {
-									a := "pki-vol"
-									return &a
-								}(),
-							},
-						},
-					},
-					{
 						Name: &kubeconfigCM.Name,
 						VolumeSourceApplyConfiguration: applycorev1.VolumeSourceApplyConfiguration{
 							ConfigMap: &applycorev1.ConfigMapVolumeSourceApplyConfiguration{
 								LocalObjectReferenceApplyConfiguration: applycorev1.LocalObjectReferenceApplyConfiguration{
 									Name: &kubeconfigCM.Name,
 								},
-								//DefaultMode: func() *int32 {
-								//	a := int32(0755)
-								//	return &a
-								//}(),
+							},
+						},
+					},
+					// cluster ca comfigmap
+					{
+						Name: &clusterCa.Name,
+						VolumeSourceApplyConfiguration: applycorev1.VolumeSourceApplyConfiguration{
+							ConfigMap: &applycorev1.ConfigMapVolumeSourceApplyConfiguration{
+								LocalObjectReferenceApplyConfiguration: applycorev1.LocalObjectReferenceApplyConfiguration{
+									Name: &clusterCa.Name,
+								},
+								DefaultMode: func() *int32 {
+									v := int32(0755)
+									return &v
+								}(),
 							},
 						},
 					},
@@ -2048,30 +2435,7 @@ done`,
 								}(),
 							},
 						},
-						VolumeMounts: []applycorev1.VolumeMountApplyConfiguration{
-							{
-								Name: &pkiPvc.Name,
-								MountPath: func() *string {
-									a := "/etc/kubernetes/pki"
-									return &a
-								}(),
-							},
-							{
-								Name: &kubeconfigCM.Name,
-								MountPath: func() *string {
-									v := "/etc/kubernetes/kube-controller-manager.kubeconfig"
-									return &v
-								}(),
-								SubPath: func() *string {
-									v := "kube-controller-manager.kubeconfig"
-									return &v
-								}(),
-								ReadOnly: func() *bool {
-									v := true
-									return &v
-								}(),
-							},
-						},
+						VolumeMounts: controllermanagervolumeMount,
 						LivenessProbe: &applycorev1.ProbeApplyConfiguration{
 							ProbeHandlerApplyConfiguration: applycorev1.ProbeHandlerApplyConfiguration{
 								TCPSocket: &applycorev1.TCPSocketActionApplyConfiguration{
@@ -2140,6 +2504,21 @@ done`,
 	}
 
 	// kube-scheduler deployment
+	schedulervolumeMount := append(volumeMount, applycorev1.VolumeMountApplyConfiguration{
+		Name: &kubeconfigCM.Name,
+		MountPath: func() *string {
+			v := "/etc/kubernetes/kube-scheduler.kubeconfig"
+			return &v
+		}(),
+		SubPath: func() *string {
+			v := "kube-scheduler.kubeconfig"
+			return &v
+		}(),
+		ReadOnly: func() *bool {
+			v := true
+			return &v
+		}(),
+	})
 	_, err = kubeControl.Deployment().Apply(ns.Name, "kube-scheduler", &applyappsv1.DeploymentSpecApplyConfiguration{
 		Replicas: func() *int32 {
 			mode := int32(1)
@@ -2300,20 +2679,6 @@ done`,
 				},
 				Volumes: []applycorev1.VolumeApplyConfiguration{
 					{
-						Name: func() *string {
-							a := "pki-vol"
-							return &a
-						}(),
-						VolumeSourceApplyConfiguration: applycorev1.VolumeSourceApplyConfiguration{
-							PersistentVolumeClaim: &applycorev1.PersistentVolumeClaimVolumeSourceApplyConfiguration{
-								ClaimName: func() *string {
-									a := "pki-vol"
-									return &a
-								}(),
-							},
-						},
-					},
-					{
 						Name: &kubeconfigCM.Name,
 						VolumeSourceApplyConfiguration: applycorev1.VolumeSourceApplyConfiguration{
 							ConfigMap: &applycorev1.ConfigMapVolumeSourceApplyConfiguration{
@@ -2324,6 +2689,20 @@ done`,
 								//	a := int32(0755)
 								//	return &a
 								//}(),
+							},
+						},
+					},
+					{
+						Name: &clusterCa.Name,
+						VolumeSourceApplyConfiguration: applycorev1.VolumeSourceApplyConfiguration{
+							ConfigMap: &applycorev1.ConfigMapVolumeSourceApplyConfiguration{
+								LocalObjectReferenceApplyConfiguration: applycorev1.LocalObjectReferenceApplyConfiguration{
+									Name: &clusterCa.Name,
+								},
+								DefaultMode: func() *int32 {
+									v := int32(0755)
+									return &v
+								}(),
 							},
 						},
 					},
@@ -2397,30 +2776,7 @@ done`,
 								}(),
 							},
 						},
-						VolumeMounts: []applycorev1.VolumeMountApplyConfiguration{
-							{
-								Name: &pkiPvc.Name,
-								MountPath: func() *string {
-									a := "/etc/kubernetes/pki"
-									return &a
-								}(),
-							},
-							{
-								Name: &kubeconfigCM.Name,
-								MountPath: func() *string {
-									v := "/etc/kubernetes/kube-scheduler.kubeconfig"
-									return &v
-								}(),
-								SubPath: func() *string {
-									v := "kube-scheduler.kubeconfig"
-									return &v
-								}(),
-								ReadOnly: func() *bool {
-									v := true
-									return &v
-								}(),
-							},
-						},
+						VolumeMounts: schedulervolumeMount,
 						LivenessProbe: &applycorev1.ProbeApplyConfiguration{
 							ProbeHandlerApplyConfiguration: applycorev1.ProbeHandlerApplyConfiguration{
 								TCPSocket: &applycorev1.TCPSocketActionApplyConfiguration{
@@ -2496,7 +2852,7 @@ func ClusterDelete(c *gin.Context) {
 	kubeControl.Service().Delete(ns.Name, "etcd")
 	kubeControl.ConfigMaps().Delete(ns.Name, "kubeconfig")
 	kubeControl.ConfigMaps().Delete(ns.Name, "kube-apiserver")
-	kubeControl.Pvc().Delete(ns.Name, "pki-vol")
+	//kubeControl.Pvc().Delete(ns.Name, "pki-vol")
 	kubeControl.Roles().Delete(ns.Name, "application:control-plane:etcd")
 	kubeControl.ServiceAccount().Delete(ns.Name, "etcd")
 	kubeControl.Namespace().Delete(ns.Name)

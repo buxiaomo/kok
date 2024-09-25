@@ -57,6 +57,8 @@ Now you can open the link to create the cluster
 
 ## Layout
 <img src="./img/cluster.png">
+<img src="./img/log.png">
+<img src="./img/monitoring.png">
 
 * https://kubernetes.io/docs/reference/kubernetes-api/
 * https://gist.github.com/alaypatel07/92835ab398a342570a3940474590e825

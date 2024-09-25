@@ -27,7 +27,6 @@ func (t deployment) Get(namespace, name string) (result *v1.Deployment, err erro
 }
 
 func (t deployment) Patch(namespace, name string, data []byte) (result *v1.Deployment, err error) {
-
 	return t.clientset.AppsV1().Deployments(namespace).Patch(t.ctx, name, types.MergePatchType, data, metav1.PatchOptions{})
 }
 

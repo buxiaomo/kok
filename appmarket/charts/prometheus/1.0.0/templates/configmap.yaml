@@ -7,8 +7,12 @@ data:
   prometheus.yml: |-
     # my global config
     global:
+      external_labels:
+        clusterName: {{ .Values.clusterName }}
+        clusterEnv: {{ .Values.clusterEnv }}
       scrape_interval: 15s
       evaluation_interval: 15s
+    
     scrape_configs:
       - job_name: "kube-state-metrics"
         kubernetes_sd_configs:
@@ -78,7 +82,7 @@ data:
         relabel_configs:
           - action: labelmap
             regex: __meta_kubernetes_node_label_(.+)
-    
+
     remote_write:
       - url: "{{ .Values.remoteWrite }}/api/v1/write"
         remote_timeout: 30s

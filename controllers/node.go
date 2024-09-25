@@ -50,7 +50,7 @@ func NodeInit(c *gin.Context) {
 		return
 	}
 
-	cm, _ := kubeControl.ConfigMaps().Get(ns.Name, "pki")
+	cm, _ := kubeControl.ConfigMaps().Get(ns.Name, "cluster-ca")
 
 	info := install{
 		Runc:          ns.Labels["runc"],

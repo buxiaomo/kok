@@ -15,8 +15,8 @@ func init() {
 	viper.SetDefault("JWT_TOKEN", "secret")
 	viper.SetDefault("DB_URL", "./kok.sqlite")
 	viper.SetDefault("DB_TYPE", "sqlite")
-	viper.SetDefault("WEBHOOK_URL", "http://127.0.0.1:8080")
-	viper.SetDefault("DOMAIN_NAME", "example.com")
+	//viper.SetDefault("WEBHOOK_URL", "http://127.0.0.1:8080")
+	//viper.SetDefault("DOMAIN_NAME", "example.com")
 	viper.SetDefault("PROMETHEUS_URL", "http://prometheus.kok.svc:9090")
 	viper.SetDefault("ELASTICSEARCH_URL", "http://elasticsearch.kok.svc:9200")
 
