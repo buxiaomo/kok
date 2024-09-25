@@ -25,14 +25,62 @@ import (
 	"kok/pkg/utils"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"text/template"
 	"time"
 )
 
-func kubeApiserverCfg() map[string]string {
+func kubeApiserverCfg(project, env string) map[string]string {
+	u, err := url.Parse(viper.GetString("ELASTICSEARCH_URL"))
+	if err != nil {
+		panic(err)
+	}
 	return map[string]string{
+		"fluent-bit.conf": fmt.Sprintf(`[Service]
+    Http_Listen    0.0.0.0
+    Http_Port    2020
+    Http_Server    true
+    Log_Level    error
+    Parsers_File    /fluent-bit/etc/parsers.conf
+[Input]
+    Name    tail
+    Path    /var/log/kubernetes/audit.log
+    Refresh_Interval    10
+    DB    /fluent-bit/devops-kube-audit.db
+    DB.Sync    Normal
+    Mem_Buf_Limit    500MB
+    Tag    devops-kube-audit.*
+[Filter]
+    Name    parser
+    Match    devops-kube-audit.*
+    Key_Name    log
+    Parser    json
+[Filter]
+    Name    record_modifier
+    Match    devops-kube-audit.*
+    Record    clusterName %s
+[Filter]
+    Name    record_modifier
+    Match    devops-kube-audit.*
+    Record    clusterEnv %s
+[Filter]
+    Name    modify
+    Match    devops-kube-audit.*
+    Rename    requestReceivedTimestamp    @timestamp
+[Output]
+    Name    es
+    Match_Regex    devops-kube-audit.*
+    Host    %s
+    Port    %s
+    Index    devops-kube-audit-%%Y.%%m.%%d
+    Type    _doc
+    Time_Key    @timestamp
+    Replace_Dots    true
+    Trace_Error    true
+    Suppress_Type_Name    false
+`, project, env, u.Hostname(), u.Port()),
 		"encryption-config.yaml": `kind: EncryptionConfig
 apiVersion: v1
 resources:
@@ -1685,7 +1733,7 @@ func ClusterCreate(c *gin.Context) {
 
 	// kube-apiserver cm
 	// todo add
-	kubeApiserverCM, err := kubeControl.ConfigMaps().Apply(ns.Name, "kube-apiserver", kubeApiserverCfg())
+	kubeApiserverCM, err := kubeControl.ConfigMaps().Apply(ns.Name, "kube-apiserver", kubeApiserverCfg(info.Project, info.Env))
 	if err != nil {
 		panic(err)
 	}
@@ -1713,6 +1761,16 @@ func ClusterCreate(c *gin.Context) {
 			return &v
 		}(),
 	})
+	apiservervolumeMount = append(apiservervolumeMount, applycorev1.VolumeMountApplyConfiguration{
+		Name: func() *string {
+			v := "audit-log-dir"
+			return &v
+		}(),
+		MountPath: func() *string {
+			v := "/var/log/kubernetes/"
+			return &v
+		}(),
+	})
 
 	_, err = kubeControl.Deployment().Apply(ns.Name, "kube-apiserver", &applyappsv1.DeploymentSpecApplyConfiguration{
 		Replicas: func() *int32 {
@@ -1727,8 +1785,8 @@ func ClusterCreate(c *gin.Context) {
 		Template: &applycorev1.PodTemplateSpecApplyConfiguration{
 			ObjectMetaApplyConfiguration: &applymetav1.ObjectMetaApplyConfiguration{
 				Name: func() *string {
-					a := "kube-apiserver"
-					return &a
+					v := "kube-apiserver"
+					return &v
 				}(),
 				Namespace: &namespace,
 				Labels: map[string]string{
@@ -1870,6 +1928,22 @@ func ClusterCreate(c *gin.Context) {
 								},
 								DefaultMode: func() *int32 {
 									v := int32(0755)
+									return &v
+								}(),
+							},
+						},
+					},
+					// audit-log-dir
+					{
+						Name: func() *string {
+							v := "audit-log-dir"
+							return &v
+						}(),
+						VolumeSourceApplyConfiguration: applycorev1.VolumeSourceApplyConfiguration{
+							EmptyDir: &applycorev1.EmptyDirVolumeSourceApplyConfiguration{
+								//Medium: nil,
+								SizeLimit: func() *resource.Quantity {
+									v := resource.MustParse("150M")
 									return &v
 								}(),
 							},
@@ -2050,6 +2124,39 @@ done`, etcdSvc.Name, etcdSvc.Namespace),
 								a := int32(5)
 								return &a
 							}(),
+						},
+					},
+					{
+						Name: func() *string {
+							v := "fluent-bit"
+							return &v
+						}(),
+						Image: func() *string {
+							v := "fluent/fluent-bit:3.1.8"
+							return &v
+						}(),
+						VolumeMounts: []applycorev1.VolumeMountApplyConfiguration{
+							{
+								Name: &kubeApiserverCM.Name,
+								MountPath: func() *string {
+									v := "/fluent-bit/etc/fluent-bit.conf"
+									return &v
+								}(),
+								SubPath: func() *string {
+									v := "fluent-bit.conf"
+									return &v
+								}(),
+							},
+							{
+								Name: func() *string {
+									v := "audit-log-dir"
+									return &v
+								}(),
+								MountPath: func() *string {
+									v := "/var/log/kubernetes/"
+									return &v
+								}(),
+							},
 						},
 					},
 				},

@@ -7,8 +7,7 @@ data:
   config.yaml: |
     logLevel: warn
     logFormat: json
-    clusterName: {{ .Values.clusterName }}
-    clusterEnv: {{ .Values.clusterEnv }}
+    clusterName: {{ .Values.clusterName }}-{{ .Values.clusterEnv }}
     metricsNamePrefix: event_exporter_
     route:
       routes:
