@@ -13,17 +13,18 @@ func init() {
 	viper.SetDefault("GIN_MODE", "debug")
 	viper.SetDefault("GIN_HOST", ":8080")
 	viper.SetDefault("JWT_TOKEN", "secret")
-	viper.SetDefault("DB_URL", "./kok.sqlite")
+	viper.SetDefault("DB_URL", "./data/kok.sqlite")
 	viper.SetDefault("DB_TYPE", "sqlite")
-	//viper.SetDefault("WEBHOOK_URL", "http://127.0.0.1:8080")
-	//viper.SetDefault("DOMAIN_NAME", "example.com")
 	viper.SetDefault("PROMETHEUS_URL", "http://prometheus.kok.svc:9090")
 	viper.SetDefault("ELASTICSEARCH_URL", "http://elasticsearch.kok.svc:9200")
 
 	viper.AutomaticEnv()
+	if _, err := os.Stat("./data"); err != nil {
+		os.Mkdir("./data", 0755)
+	}
 
-	if _, err := os.Stat("./kubeconfig"); err != nil {
-		os.Mkdir("./kubeconfig", 0755)
+	if _, err := os.Stat("./data/kubeconfig"); err != nil {
+		os.Mkdir("./data/kubeconfig", 0755)
 	}
 
 	kc := control.New("")

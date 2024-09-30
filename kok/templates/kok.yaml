@@ -114,7 +114,7 @@ spec:
       serviceAccount: kok
       containers:
         - name: kok
-          image: "docker.m.moby.org.cn/{{ .Values.hub }}:{{ .Values.tag }}"
+          image: "{{ .Values.hub }}:{{ .Values.tag }}"
           imagePullPolicy: Always
           volumeMounts:
             - name: conf-vol
@@ -148,5 +148,11 @@ spec:
               value: "Asia/Shanghai"
             - name: GIN_MODE
               value: "release"
-            - name: WEBHOOK_URL
-              value: "{{ .Values.webhookUrl }}"
+            - name: PROMETHEUS_URL
+              value: "{{ .Values.prometheus.url }}"
+            - name: ELASTICSEARCH_URL
+              value: "{{ .Values.elasticsearch.url }}"
+            - name: DB_URL
+              value: "{{ .Values.database.url }}"
+            - name: DB_TYPE
+              value: "{{ .Values.database.type }}"

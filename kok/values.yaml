@@ -4,4 +4,11 @@
 hub: "buxiaomo/kok"
 tag: "1.0.0"
 
-webhookUrl: "http://127.0.0.1:8080"
+database:
+  type: "sqlite"
+  url: "/app/data/kok.sqlite"
+
+prometheus:
+  url: "http://127.0.0.1:9090"
+elasticsearch:
+  url: "http://127.0.0.1:9200"

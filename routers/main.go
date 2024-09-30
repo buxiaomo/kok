@@ -1,14 +1,11 @@
 package routers
 
 import (
-	"encoding/base64"
 	"fmt"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
-	"io/ioutil"
 	"kok/controllers"
-	"log"
 	"net/http"
 	"time"
 )
@@ -60,46 +57,46 @@ func SetupRouter() *gin.Engine {
 		return
 	})
 	r.GET("/install", controllers.NodeInit)
-	r.POST("/kubeconfig", func(c *gin.Context) {
-		name, _ := c.GetQuery("name")
-		fileHeader, err := c.FormFile("file")
-		if err != nil {
-			c.String(http.StatusBadRequest, fmt.Sprintf("Failed to get file: %s", err.Error()))
-			return
-		}
-
-		// Open the file
-		file, err := fileHeader.Open()
-		if err != nil {
-			c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to open file: %s", err.Error()))
-			return
-		}
-		defer file.Close()
-
-		// Read file content
-		fileContent, err := ioutil.ReadAll(file)
-		if err != nil {
-			c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to read file: %s", err.Error()))
-			return
-		}
-		//fmt.Println(string(fileContent))
-
-		// Decode base64 content
-		decodedContent, err := base64.StdEncoding.DecodeString(string(fileContent))
-		if err != nil {
-			c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to decode base64: %s", err.Error()))
-			return
-		}
-
-		err = ioutil.WriteFile(fmt.Sprintf("./kubeconfig/%s.kubeconfig", name), decodedContent, 0600)
-		if err != nil {
-			log.Printf("Failed to save file: %v", err)
-			c.String(http.StatusInternalServerError, "Failed to save file")
-			return
-		}
-
-		c.Status(200)
-	})
+	//r.POST("/kubeconfig", func(c *gin.Context) {
+	//	name, _ := c.GetQuery("name")
+	//	fileHeader, err := c.FormFile("file")
+	//	if err != nil {
+	//		c.String(http.StatusBadRequest, fmt.Sprintf("Failed to get file: %s", err.Error()))
+	//		return
+	//	}
+	//
+	//	// Open the file
+	//	file, err := fileHeader.Open()
+	//	if err != nil {
+	//		c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to open file: %s", err.Error()))
+	//		return
+	//	}
+	//	defer file.Close()
+	//
+	//	// Read file content
+	//	fileContent, err := ioutil.ReadAll(file)
+	//	if err != nil {
+	//		c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to read file: %s", err.Error()))
+	//		return
+	//	}
+	//	//fmt.Println(string(fileContent))
+	//
+	//	// Decode base64 content
+	//	decodedContent, err := base64.StdEncoding.DecodeString(string(fileContent))
+	//	if err != nil {
+	//		c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to decode base64: %s", err.Error()))
+	//		return
+	//	}
+	//
+	//	err = ioutil.WriteFile(fmt.Sprintf("./kubeconfig/%s.kubeconfig", name), decodedContent, 0600)
+	//	if err != nil {
+	//		log.Printf("Failed to save file: %v", err)
+	//		c.String(http.StatusInternalServerError, "Failed to save file")
+	//		return
+	//	}
+	//
+	//	c.Status(200)
+	//})
 
 	private := r.Group("/console")
 	//private.Use(AuthRequired)

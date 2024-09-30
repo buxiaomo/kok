@@ -211,7 +211,7 @@ func plugin(remoteKubeControl *control.Kc, info createInfo, namespace string) {
 	err := waitForClusterReady(remoteKubeControl, namespace)
 	ns, _ := remoteKubeControl.Namespace().Get(namespace)
 	if err == nil {
-		remoteAppMarket := appmarket.New(fmt.Sprintf("./kubeconfig/%s.kubeconfig", namespace))
+		remoteAppMarket := appmarket.New(fmt.Sprintf("./data/kubeconfig/%s.kubeconfig", namespace))
 
 		switch info.Network {
 		case "flannel":
@@ -875,7 +875,7 @@ func ClusterCreate(c *gin.Context) {
 			CertData: []byte(clusterCa.Data["admin.crt"]),
 			KeyData:  []byte(clusterCa.Data["admin.key"]),
 		},
-	}, fmt.Sprintf("./kubeconfig/%s-%s.kubeconfig", info.Project, info.Env))
+	}, fmt.Sprintf("./data/kubeconfig/%s-%s.kubeconfig", info.Project, info.Env))
 
 	kubeControl.ConfigMaps().Apply(ns.Name, "remote-access", map[string]string{
 		"remote-access.kubeconfig": string(kubeconfig),

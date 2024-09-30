@@ -4,6 +4,22 @@ This project is deploy kubernetes control-plane on k8s.
 
 ## Depend-on
 
+### fluent-operator
+
+Will be used collect control plane logs.
+
+```
+helm install fluent-operator --create-namespace -n infra \
+--set containerRuntime=containerd \
+--set fluentbit.enable=false \
+--set fluentbit.input.tail.enable=false \
+--set fluentbit.input.systemd.enable=false \
+--set fluentbit.filter.kubernetes.enable=false \
+--set fluentbit.filter.containerd.enable=false \
+--set fluentbit.filter.systemd.enable=false \
+https://github.com/fluent/fluent-operator/releases/download/v3.2.0/fluent-operator.tgz
+```
+
 ### LoadBalancer
 
 Will be used to expose the kube-apiserver service and communicate with apiserver through this IP when adding nodes.
@@ -26,8 +42,8 @@ sudo modprobe nfs
 sudo modprobe nfsd
 docker run --privileged -d --name nfs-server \
 --net host \
--e NFS_EXPORT_0='/aaa *(rw,fsid=1,sync,insecure,no_subtree_check,no_root_squash)'  \
--v /Users/peng.liu/temp/nfs:/aaa \
+-e NFS_EXPORT_0='/kubernetes *(rw,fsid=1,sync,insecure,no_subtree_check,no_root_squash)'  \
+-v /data/nfs:/kubernetes \
 erichough/nfs-server:2.2.1
 
 kind create cluster --name kok --image docker.m.moby.org.cn/kindest/node:v1.30.2

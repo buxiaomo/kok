@@ -9,3 +9,4 @@ kubeconfig/*.kubeconfig
 !appmarket/assets/.gitignore
 appmarket/assets/*
 *.sqlite
+data
