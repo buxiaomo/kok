@@ -1,0 +1,72 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: kibana-vol
+  labels:
+    app: kibana
+spec:
+  storageClassName: nfs-client
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+spec:
+  type: LoadBalancer
+  selector:
+    name: kibana
+  ports:
+    - name: http
+      port: 5601
+      targetPort: 5601
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  labels:
+    name: kibana
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      name: kibana
+  template:
+    metadata:
+      name: kibana
+      labels:
+        name: kibana
+    spec:
+      volumes:
+        - name: kibana-vol
+          persistentVolumeClaim:
+            claimName: kibana-vol
+      containers:
+        - name: kibana
+          image: kibana:7.17.22
+          ports:
+            - name: http
+              containerPort: 5601
+              protocol: TCP
+          # resources:
+          #   limits:
+          #     cpu: "230m"
+          #     memory: "700Mi"
+          #   requests:
+          #     cpu: "25m"
+          #     memory: "70Mi"
+          volumeMounts:
+            - name: kibana-vol
+              mountPath: /usr/share/kibana/data
+          env:
+            - name: ELASTICSEARCH_HOSTS
+              value: '["http://elasticsearch:9200"]'

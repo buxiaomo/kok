@@ -56,8 +56,10 @@ Now you can open the link to create the cluster
 * cluster event log
 
 ## Layout
-<img src="./img/cluster.png">
-<img src="./img/log.png">
+<img src="./img/main.png">
+<img src="./img/kube-audit-log.png">
+<img src="./img/kube-event-log.png">
+<img src="./img/kube-control-plane-log.png">
 <img src="./img/monitoring.png">
 
 * https://kubernetes.io/docs/reference/kubernetes-api/

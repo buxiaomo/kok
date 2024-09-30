@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	applyappsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
@@ -27,6 +28,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -128,6 +130,81 @@ rules:
   # A catch-all rule to log all other requests at the request level.
   - level: Request`,
 	}
+}
+
+func controlLog(kubeControl *control.Kc, ns *corev1.Namespace) error {
+	u, err := url.Parse(viper.GetString("ELASTICSEARCH_URL"))
+	if err != nil {
+		return err
+	}
+	port, _ := strconv.Atoi(u.Port())
+	cfdo := map[string]interface{}{
+		"apiVersion": "fluentd.fluent.io/v1alpha1",
+		"kind":       "ClusterOutput",
+		"metadata": map[string]interface{}{
+			"name": ns.Name,
+			"labels": map[string]interface{}{
+				"output.fluentd.fluent.io/rule.name": ns.Name,
+			},
+		},
+		"spec": map[string]interface{}{
+			"outputs": []map[string]interface{}{
+				{
+					"elasticsearch": map[string]interface{}{
+						"host":           u.Hostname(),
+						"port":           port,
+						"logstashFormat": true,
+						"logstashPrefix": ns.Name,
+					},
+				},
+			},
+		},
+	}
+	err = kubeControl.Crd("").Apply(ns.Name, cfdo, schema.GroupVersionResource{
+		Group:    "fluentd.fluent.io",
+		Version:  "v1alpha1",
+		Resource: "clusteroutputs",
+	})
+	if err != nil {
+		return err
+	}
+
+	cfdc := map[string]interface{}{
+		"apiVersion": "fluentd.fluent.io/v1alpha1",
+		"kind":       "ClusterFluentdConfig",
+		"metadata": map[string]interface{}{
+			"name": ns.Name,
+			"labels": map[string]interface{}{
+				"config.fluentd.fluent.io/enabled": "true",
+			},
+		},
+		"spec": map[string]interface{}{
+			"watchedNamespaces": []string{
+				ns.Name,
+			},
+			"clusterFilterSelector": map[string]interface{}{
+				"matchLabels": map[string]interface{}{
+					"filter.fluentd.fluent.io/rule.name": ns.Name,
+				},
+			},
+			"clusterOutputSelector": map[string]interface{}{
+				"matchLabels": map[string]interface{}{
+					"output.fluentd.fluent.io/rule.name": ns.Name,
+				},
+			},
+		},
+	}
+	err = kubeControl.Crd("").Apply(ns.Name, cfdc,
+		schema.GroupVersionResource{
+			Group:    "fluentd.fluent.io",
+			Version:  "v1alpha1",
+			Resource: "clusterfluentdconfigs",
+		},
+	)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func plugin(remoteKubeControl *control.Kc, info createInfo, namespace string) {
@@ -2916,6 +2993,12 @@ done`,
 		panic(err)
 	}
 
+	err = controlLog(kubeControl, ns)
+
+	if err != nil {
+		fmt.Println(fmt.Sprintf("crd error: %s", err.Error()))
+	}
+
 	go plugin(kubeControl, info, namespace)
 
 	c.JSON(http.StatusOK, gin.H{
@@ -2955,10 +3038,21 @@ func ClusterDelete(c *gin.Context) {
 	kubeControl.Service().Delete(ns.Name, "etcd")
 	kubeControl.ConfigMaps().Delete(ns.Name, "kubeconfig")
 	kubeControl.ConfigMaps().Delete(ns.Name, "kube-apiserver")
-	//kubeControl.Pvc().Delete(ns.Name, "pki-vol")
+
 	kubeControl.Roles().Delete(ns.Name, "application:control-plane:etcd")
 	kubeControl.ServiceAccount().Delete(ns.Name, "etcd")
 	kubeControl.Namespace().Delete(ns.Name)
+
+	kubeControl.Crd("").Delete(ns.Name, schema.GroupVersionResource{
+		Group:    "fluentd.fluent.io",
+		Version:  "v1alpha1",
+		Resource: "clusteroutputs",
+	})
+	kubeControl.Crd("").Delete(ns.Name, schema.GroupVersionResource{
+		Group:    "fluentd.fluent.io",
+		Version:  "v1alpha1",
+		Resource: "clusterfluentdconfigs",
+	})
 
 	filename := fmt.Sprintf("./kubeconfig/%s.kubeconfig", ns.Name)
 	_, err = os.Stat(filename)

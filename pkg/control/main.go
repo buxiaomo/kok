@@ -5,15 +5,22 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 )
 
 type Kc struct {
-	clientset kubernetes.Interface
+	dynamicClient *dynamic.DynamicClient
+	clientset     kubernetes.Interface
 }
 
 func New(kubeconfig string) *Kc {
 	config, err := createKubeconfig(kubeconfig)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -25,7 +32,8 @@ func New(kubeconfig string) *Kc {
 	}
 
 	return &Kc{
-		clientset: c,
+		dynamicClient: dynamicClient,
+		clientset:     c,
 	}
 }
 

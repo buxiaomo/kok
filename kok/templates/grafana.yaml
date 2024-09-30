@@ -1,0 +1,85 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      volumes:
+        - name: grafana-vol
+          persistentVolumeClaim:
+            claimName: grafana-vol
+      containers:
+        - name: grafana
+          image: grafana/grafana:11.1.4
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: grafana-vol
+              mountPath: /var/lib/grafana
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          livenessProbe:
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 5
+            tcpSocket:
+              port: 3000
+          readinessProbe:
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+            tcpSocket:
+              port: 3000
+          env:
+            - name: TZ
+              value: "Asia/Shanghai"
+          # resources:
+          #   limits:
+          #     cpu: "2"
+          #     memory: "1Gi"
+          #   requests:
+          #     cpu: "1"
+          #     memory: "512Mi"
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: grafana-vol
+  labels:
+    app: grafana
+spec:
+  storageClassName: nfs-client
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  labels:
+    app: grafana
+spec:
+  selector:
+    app: grafana
+  type: LoadBalancer
+  ports:
+    - name: web
+      port: 3000
+      targetPort: http
