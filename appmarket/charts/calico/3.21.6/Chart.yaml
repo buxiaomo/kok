@@ -1,7 +1,7 @@
 apiVersion: v2
 name: calico
 description: support kubernetes v1.20
-kubeVersion: ">= 1.20.0 <= 1.20.15"
+kubeVersion: ">= 1.20.0, <= 1.20.15"
 
 # A chart can be either an 'application' or a 'library' chart.
 #

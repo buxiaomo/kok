@@ -455,7 +455,7 @@
     function getNetworkVersion(){
         $.ajax({
             type: 'GET',
-            url: '/console/appmarket?name=' + $('.network').val() ,
+            url: '/console/appmarket?name=' + $('.network').val() + '&kubeVersion=' + $('.clusterVersion').val().substring(1),
             contentType: "application/json; charset=utf-8",
             dataType: "json",
             success: function(r) {
@@ -463,7 +463,7 @@
                 for (var i = 0; i < r.data.length; i++){
                     $('#networkversion').append($('<option>', {
                         value: r.data[i].version,
-                        text: r.data[i].version + " ("+r.data[i].description +")"
+                        text: r.data[i].version
                     }));
                 }
             },

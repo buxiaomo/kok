@@ -2,6 +2,7 @@ package appmarket
 
 import (
 	"fmt"
+	"github.com/hashicorp/go-version"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
@@ -53,17 +54,24 @@ func (app chart) Get(chatName string) bool {
 	return true
 }
 
-func (app chart) Search(name string) (chats []Chart) {
+func (app chart) Search(name, kubeVersion string) (chats []Chart) {
 	indexFile, err := repo.LoadIndexFile("./appmarket/assets/index.yaml")
 	if err != nil {
 		panic(err.Error())
 	}
 	for _, entry := range indexFile.Entries[name] {
-		chats = append(chats, Chart{
-			Name:        entry.Name,
-			Version:     entry.AppVersion,
-			Description: entry.Description,
-		})
+		isOk, err := isKubeVersionCompatible(kubeVersion, entry.Metadata.KubeVersion)
+		//fmt.Println(kubeVersion, entry.Metadata.KubeVersion, isOk, err)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		if isOk {
+			chats = append(chats, Chart{
+				Name:        entry.Name,
+				Version:     entry.AppVersion,
+				Description: entry.Description,
+			})
+		}
 	}
 	return chats
 }
@@ -117,4 +125,27 @@ func (app chart) UnInstall(name string) (err error) {
 	}
 	log.Printf("%s 成功卸载\n", resp.Release.Name)
 	return
+}
+
+// 比较 Kubernetes 版本是否在 Chart 的 kubeVersion 兼容范围内
+func isKubeVersionCompatible(kubeVersion string, chartKubeVersion string) (bool, error) {
+	// 如果 chart 没有定义 kubeVersion，默认认为兼容
+	if chartKubeVersion == "" {
+		return true, nil
+	}
+
+	// 解析版本约束范围
+	constraint, err := version.NewConstraint(chartKubeVersion)
+	if err != nil {
+		return false, fmt.Errorf("invalid kubeVersion constraint in chart: %v", err)
+	}
+
+	// 解析当前 Kubernetes 版本
+	kubeVer, err := version.NewVersion(kubeVersion)
+	if err != nil {
+		return false, fmt.Errorf("invalid Kubernetes version: %v", err)
+	}
+
+	// 检查 Kubernetes 版本是否满足约束
+	return constraint.Check(kubeVer), nil
 }

@@ -1,7 +1,9 @@
 apiVersion: v2
 name: antrea
-description: support kubernetes v1.27-v1.30
+description: Kubernetes networking based on Open vSwitch
 icon: https://github.com/antrea-io/antrea/blob/main/docs/assets/logo/antrea_logo_stacked_sml.png?raw=true
+kubeVersion: ">= 1.27.0"
+
 # A chart can be either an 'application' or a 'library' chart.
 #
 # Application charts are a collection of templates that can be packaged into versioned archives

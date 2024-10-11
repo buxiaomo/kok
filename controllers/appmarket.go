@@ -8,6 +8,8 @@ import (
 
 func AppmarketGet(c *gin.Context) {
 	name := c.Query("name")
+	kubeVersion := c.Query("kubeVersion")
+
 	if name == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"data": nil,
@@ -17,7 +19,7 @@ func AppmarketGet(c *gin.Context) {
 	} else {
 		am := appmarket.New("")
 		c.JSON(http.StatusOK, gin.H{
-			"data": am.Chart().Search(name),
+			"data": am.Chart().Search(name, kubeVersion),
 			"msg":  nil,
 		})
 		return

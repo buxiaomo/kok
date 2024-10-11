@@ -4,3 +4,4 @@ Jenkinsfile
 kubeconfig
 README.md
 .DS_Store
+.git

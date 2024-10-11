@@ -1,6 +1,7 @@
 apiVersion: v2
 name: canal
 description: support kubernetes v1.17
+kubeVersion: ">=1.17.0, <=1.17.17"
 
 # A chart can be either an 'application' or a 'library' chart.
 #
