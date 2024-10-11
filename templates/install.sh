@@ -131,10 +131,15 @@ mkdir -p /opt/cni/bin
 wget https://github.com/containernetworking/plugins/releases/download/v1.5.1/cni-plugins-linux-amd64-v1.5.1.tgz -O /usr/local/src/cni-plugins-linux-amd64-v1.5.1.tgz
 tar -zxf /usr/local/src/cni-plugins-linux-amd64-v1.5.1.tgz --exclude LICENSE --exclude README.md -C /opt/cni/bin
 
-echo "-> Install CNI."
+echo "-> Install Runc."
 # Install runc
 wget https://github.com/opencontainers/runc/releases/download/v{{ .Runc }}/runc.amd64 -O /usr/local/bin/runc
 chmod +x /usr/local/bin/runc
+
+echo "-> Install nerdctl."
+# Install nerdctl
+wget https://github.com/containerd/nerdctl/releases/download/v1.7.7/nerdctl-1.7.7-linux-amd64.tar.gz -O /usr/local/src/nerdctl-1.7.7-linux-amd64.tar.gz
+tar -zxf /usr/local/src/nerdctl-1.7.7-linux-amd64.tar.gz -C /usr/local/bin nerdctl
 
 echo "-> Install Containerd."
 # Install containerd

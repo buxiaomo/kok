@@ -5,7 +5,7 @@ export ID=${HOSTNAME##*[^0-9]}
 export ETCDCTL_API=3
 export HOSTNAME=$(hostname)
 export MEMBER_COUNT=$(curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "https://kubernetes.default.svc/apis/apps/v1/namespaces/${NAMESPACE}/statefulsets/etcd" | jq .spec.replicas)
-export ETCD_CERT="--cacert /var/lib/cache/ca.crt --cert /var/lib/cache/healthcheck-client.crt --key /var/lib/cache/healthcheck-client.key"
+export ETCD_CERT="--cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/healthcheck-client.crt --key /etc/kubernetes/pki/etcd/healthcheck-client.key"
 
 ETCD_ENDPOINTS(){
   EPS=""
@@ -44,7 +44,7 @@ fi
 
 if [ ${MEMBER_NUMBER} -gt ${MEMBER_COUNT} ] && [ ${ID} -ne 0 ];then
   echo "Cluster reduction, Delete member."
-  etcdctl --endpoints $(ETCD_ENDPOINTS) ${ETCD_CERT} member remove $(selfHash)
+  etcdctl --endpoints https://etcd-0.etcd.demo130-noprod:2379 ${ETCD_CERT} member remove efa4135378c4a8b8
   rm -rf /var/lib/cache/etcd_member_count /var/lib/cache/envs
   mv /var/lib/etcd/member /var/lib/etcd/member.$(date '+%Y-%m-%dT%H:%M:%S').bak
 fi

@@ -16,6 +16,7 @@ func init() {
 	viper.SetDefault("DB_URL", "./data/kok.sqlite")
 	viper.SetDefault("DB_TYPE", "sqlite")
 	viper.SetDefault("PROMETHEUS_URL", "http://prometheus.kok.svc:9090")
+	viper.SetDefault("KIBANA_URL", "http://elasticsearch.kok.svc:5601")
 	viper.SetDefault("ELASTICSEARCH_URL", "http://elasticsearch.kok.svc:9200")
 
 	viper.AutomaticEnv()

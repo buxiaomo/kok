@@ -238,7 +238,12 @@ func plugin(remoteKubeControl *control.Kc, info createInfo, namespace string) {
 			"replicaCount": 1,
 			"clusterIP":    info.DnsSvc,
 		})
+
 		remoteAppMarket.Chart().Install("kube-system", "kube-state-metrics", "kube-state-metrics", false, ns.Labels["kube-state-metrics"], map[string]interface{}{
+			"replicaCount": 1,
+		})
+
+		remoteAppMarket.Chart().Install("kube-system", "metrics-server", "metrics-server", false, ns.Labels["metrics-server"], map[string]interface{}{
 			"replicaCount": 1,
 		})
 
@@ -290,11 +295,11 @@ func ClusterMonitor(c *gin.Context) {
 	name := c.Query("name")
 
 	localkubeControl := control.New("")
-	remoteKubeControl := control.New(fmt.Sprintf("./kubeconfig/%s.kubeconfig", name))
+	remoteKubeControl := control.New(fmt.Sprintf("./data/kubeconfig/%s.kubeconfig", name))
 
 	ns, err := localkubeControl.Namespace().Get(name)
 
-	remoteAppMarket := appmarket.New(fmt.Sprintf("./kubeconfig/%s.kubeconfig", name))
+	remoteAppMarket := appmarket.New(fmt.Sprintf("./data/kubeconfig/%s.kubeconfig", name))
 	remoteAppMarket.Chart().Install("kube-system", "prometheus", "prometheus", false, "1.0.0", map[string]interface{}{
 		"replicaCount": 1,
 		"remoteWrite":  viper.GetString("PROMETHEUS_URL"),
@@ -621,7 +626,7 @@ func ClusterStatus(c *gin.Context) {
 		networkName = "antrea-agent"
 	}
 
-	remoteKubeControl := control.New(fmt.Sprintf("./kubeconfig/%s.kubeconfig", name))
+	remoteKubeControl := control.New(fmt.Sprintf("./data/kubeconfig/%s.kubeconfig", name))
 	cd, _ := remoteKubeControl.Deployment().Get("kube-system", "coredns")
 	ms, _ := remoteKubeControl.Deployment().Get("kube-system", "metrics-server")
 	nw, _ := remoteKubeControl.DaemonSets().Get("kube-system", networkName)
@@ -1305,6 +1310,36 @@ func ClusterCreate(c *gin.Context) {
 				return &v
 			}(),
 		},
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/admin.crt"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "admin.crt"
+				return &v
+			}(),
+		},
+		{
+			Name: &clusterCa.Name,
+			ReadOnly: func() *bool {
+				v := true
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/etc/kubernetes/pki/admin.key"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "admin.key"
+				return &v
+			}(),
+		},
 	}
 
 	// etcd sa
@@ -1431,35 +1466,33 @@ func ClusterCreate(c *gin.Context) {
 	}
 
 	// etcd sts
-	etcdvolumeMount := append(volumeMount, applycorev1.VolumeMountApplyConfiguration{
-		Name: func() *string {
-			name := "etcd-vol"
-			return &name
-		}(),
-		MountPath: func() *string {
-			name := "/var/lib/etcd"
-			return &name
-		}(),
-		SubPath: func() *string {
-			name := "data"
-			return &name
-		}(),
-	})
-	etcdvolumeMount = append(volumeMount, applycorev1.VolumeMountApplyConfiguration{
-		Name: func() *string {
-			v := "etcd-vol"
-			return &v
-		}(),
-		MountPath: func() *string {
-			v := "/var/lib/cache"
-			return &v
-		}(),
-		SubPath: func() *string {
-			v := "cache"
-			return &v
-		}(),
-	})
+	etcdvolumeMount := append(volumeMount,
+		applycorev1.VolumeMountApplyConfiguration{
+			Name: func() *string {
+				v := "data-vol"
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/var/lib/etcd"
+				return &v
+			}(),
+		},
+		applycorev1.VolumeMountApplyConfiguration{
+			Name: func() *string {
+				v := "cache-vol"
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/var/lib/cache"
+				return &v
+			}(),
+		},
+	)
 	_, err = kubeControl.StatefulSets().Apply(ns.Name, "etcd", &applyappsv1.StatefulSetSpecApplyConfiguration{
+		//PodManagementPolicy: func() *v1.PodManagementPolicyType {
+		//	v := v1.ParallelPodManagement
+		//	return &v
+		//}(),
 		ServiceName: &etcdSvc.Name,
 		Replicas: func() *int32 {
 			i := int32(1)
@@ -1484,45 +1517,6 @@ func ClusterCreate(c *gin.Context) {
 				},
 			},
 			Spec: &applycorev1.PodSpecApplyConfiguration{
-				ServiceAccountName: &etcdSA.Name,
-				Tolerations: []applycorev1.TolerationApplyConfiguration{
-					{
-						Key: func() *string {
-							v := "node.kubernetes.io/not-ready"
-							return &v
-						}(),
-						Operator: func() *corev1.TolerationOperator {
-							v := corev1.TolerationOpExists
-							return &v
-						}(),
-						Effect: func() *corev1.TaintEffect {
-							v := corev1.TaintEffectNoExecute
-							return &v
-						}(),
-						TolerationSeconds: func() *int64 {
-							v := int64(1)
-							return &v
-						}(),
-					},
-					{
-						Key: func() *string {
-							v := "node.kubernetes.io/unreachable"
-							return &v
-						}(),
-						Operator: func() *corev1.TolerationOperator {
-							v := corev1.TolerationOpExists
-							return &v
-						}(),
-						Effect: func() *corev1.TaintEffect {
-							v := corev1.TaintEffectNoExecute
-							return &v
-						}(),
-						TolerationSeconds: func() *int64 {
-							v := int64(1)
-							return &v
-						}(),
-					},
-				},
 				Volumes: []applycorev1.VolumeApplyConfiguration{
 					// cluster ca configmap
 					{
@@ -1533,74 +1527,7 @@ func ClusterCreate(c *gin.Context) {
 									Name: &clusterCa.Name,
 								},
 								DefaultMode: func() *int32 {
-									v := int32(0755)
-									return &v
-								}(),
-							},
-						},
-					},
-				},
-				Affinity: &applycorev1.AffinityApplyConfiguration{
-					PodAntiAffinity: &applycorev1.PodAntiAffinityApplyConfiguration{
-						PreferredDuringSchedulingIgnoredDuringExecution: []applycorev1.WeightedPodAffinityTermApplyConfiguration{
-							{
-								Weight: func() *int32 {
-									v := int32(100)
-									return &v
-								}(),
-								PodAffinityTerm: &applycorev1.PodAffinityTermApplyConfiguration{
-									LabelSelector: &applymetav1.LabelSelectorApplyConfiguration{
-										MatchExpressions: []applymetav1.LabelSelectorRequirementApplyConfiguration{
-											{
-												Key: func() *string {
-													v := "app"
-													return &v
-												}(),
-												Operator: func() *metav1.LabelSelectorOperator {
-													v := metav1.LabelSelectorOpIn
-													return &v
-												}(),
-												Values: []string{
-													"etcd",
-													"kube-apiserver",
-													"kube-controller-manager",
-													"kube-scheduler",
-												},
-											},
-										},
-									},
-									Namespaces: []string{namespace},
-									TopologyKey: func() *string {
-										v := "kubernetes.io/hostname"
-										return &v
-									}(),
-								},
-							},
-						},
-						RequiredDuringSchedulingIgnoredDuringExecution: []applycorev1.PodAffinityTermApplyConfiguration{
-							{
-								LabelSelector: &applymetav1.LabelSelectorApplyConfiguration{
-									MatchExpressions: []applymetav1.LabelSelectorRequirementApplyConfiguration{
-										{
-											Key: func() *string {
-												v := "app"
-												return &v
-											}(),
-											Operator: func() *metav1.LabelSelectorOperator {
-												v := metav1.LabelSelectorOpIn
-												return &v
-											}(),
-											Values: []string{
-												"etcd",
-											},
-										},
-									},
-								},
-								Namespaces: []string{
-									namespace,
-								},
-								TopologyKey: func() *string {
-									v := "kubernetes.io/hostname"
+									v := int32(0644)
 									return &v
 								}(),
 							},
@@ -1692,72 +1619,72 @@ func ClusterCreate(c *gin.Context) {
 								},
 							},
 						},
-						LivenessProbe: &applycorev1.ProbeApplyConfiguration{
-							ProbeHandlerApplyConfiguration: applycorev1.ProbeHandlerApplyConfiguration{
-								HTTPGet: &applycorev1.HTTPGetActionApplyConfiguration{
-									Path: func() *string {
-										a := "/health"
-										return &a
-									}(),
-									Port: &intstr.IntOrString{
-										Type:   0,
-										IntVal: 2381,
-										StrVal: "2381",
-									},
-									Scheme: func() *corev1.URIScheme {
-										a := corev1.URISchemeHTTP
-										return &a
-									}(),
-								},
-							},
-							InitialDelaySeconds: func() *int32 {
-								a := int32(10)
-								return &a
-							}(),
-							TimeoutSeconds: func() *int32 {
-								a := int32(15)
-								return &a
-							}(),
-							PeriodSeconds: func() *int32 {
-								a := int32(10)
-								return &a
-							}(),
-							FailureThreshold: func() *int32 {
-								a := int32(8)
-								return &a
-							}(),
-						},
-						ReadinessProbe: &applycorev1.ProbeApplyConfiguration{
-							ProbeHandlerApplyConfiguration: applycorev1.ProbeHandlerApplyConfiguration{
-								HTTPGet: &applycorev1.HTTPGetActionApplyConfiguration{
-									Path: func() *string {
-										a := "/health"
-										return &a
-									}(),
-									Port: &intstr.IntOrString{
-										Type:   0,
-										IntVal: 2381,
-										StrVal: "2381",
-									},
-									Scheme: func() *corev1.URIScheme {
-										a := corev1.URISchemeHTTP
-										return &a
-									}(),
-								},
-							},
-							InitialDelaySeconds: func() *int32 {
-								a := int32(5)
-								return &a
-							}(),
-							TimeoutSeconds: func() *int32 {
-								a := int32(5)
-								return &a
-							}(),
-							PeriodSeconds: func() *int32 {
-								a := int32(5)
-								return &a
-							}(),
-						},
+						//LivenessProbe: &applycorev1.ProbeApplyConfiguration{
+						//	ProbeHandlerApplyConfiguration: applycorev1.ProbeHandlerApplyConfiguration{
+						//		HTTPGet: &applycorev1.HTTPGetActionApplyConfiguration{
+						//			Path: func() *string {
+						//				a := "/health"
+						//				return &a
+						//			}(),
+						//			Port: &intstr.IntOrString{
+						//				Type:   0,
+						//				IntVal: 2381,
+						//				StrVal: "2381",
+						//			},
+						//			Scheme: func() *corev1.URIScheme {
+						//				a := corev1.URISchemeHTTP
+						//				return &a
+						//			}(),
+						//		},
+						//	},
+						//	InitialDelaySeconds: func() *int32 {
+						//		a := int32(10)
+						//		return &a
+						//	}(),
+						//	TimeoutSeconds: func() *int32 {
+						//		a := int32(15)
+						//		return &a
+						//	}(),
+						//	PeriodSeconds: func() *int32 {
+						//		a := int32(10)
+						//		return &a
+						//	}(),
+						//	FailureThreshold: func() *int32 {
+						//		a := int32(8)
+						//		return &a
+						//	}(),
+						//},
+						//ReadinessProbe: &applycorev1.ProbeApplyConfiguration{
+						//	ProbeHandlerApplyConfiguration: applycorev1.ProbeHandlerApplyConfiguration{
+						//		HTTPGet: &applycorev1.HTTPGetActionApplyConfiguration{
+						//			Path: func() *string {
+						//				a := "/health"
+						//				return &a
+						//			}(),
+						//			Port: &intstr.IntOrString{
+						//				Type:   0,
+						//				IntVal: 2381,
+						//				StrVal: "2381",
+						//			},
+						//			Scheme: func() *corev1.URIScheme {
+						//				a := corev1.URISchemeHTTP
+						//				return &a
+						//			}(),
+						//		},
+						//	},
+						//	InitialDelaySeconds: func() *int32 {
+						//		a := int32(5)
+						//		return &a
+						//	}(),
+						//	TimeoutSeconds: func() *int32 {
+						//		a := int32(5)
+						//		return &a
+						//	}(),
+						//	PeriodSeconds: func() *int32 {
+						//		a := int32(5)
+						//		return &a
+						//	}(),
+						//},
 						Lifecycle: &applycorev1.LifecycleApplyConfiguration{
 							PreStop: &applycorev1.LifecycleHandlerApplyConfiguration{
 								Exec: &applycorev1.ExecActionApplyConfiguration{
@@ -1776,15 +1703,120 @@ func ClusterCreate(c *gin.Context) {
 						},
 					},
 				},
+				ServiceAccountName: &etcdSA.Name,
+				Affinity: &applycorev1.AffinityApplyConfiguration{
+					PodAntiAffinity: &applycorev1.PodAntiAffinityApplyConfiguration{
+						PreferredDuringSchedulingIgnoredDuringExecution: []applycorev1.WeightedPodAffinityTermApplyConfiguration{
+							{
+								Weight: func() *int32 {
+									v := int32(100)
+									return &v
+								}(),
+								PodAffinityTerm: &applycorev1.PodAffinityTermApplyConfiguration{
+									LabelSelector: &applymetav1.LabelSelectorApplyConfiguration{
+										MatchExpressions: []applymetav1.LabelSelectorRequirementApplyConfiguration{
+											{
+												Key: func() *string {
+													v := "app"
+													return &v
+												}(),
+												Operator: func() *metav1.LabelSelectorOperator {
+													v := metav1.LabelSelectorOpIn
+													return &v
+												}(),
+												Values: []string{
+													"etcd",
+													"kube-apiserver",
+													"kube-controller-manager",
+													"kube-scheduler",
+												},
+											},
+										},
+									},
+									Namespaces: []string{namespace},
+									TopologyKey: func() *string {
+										v := "kubernetes.io/hostname"
+										return &v
+									}(),
+								},
+							},
+						},
+						RequiredDuringSchedulingIgnoredDuringExecution: []applycorev1.PodAffinityTermApplyConfiguration{
+							{
+								LabelSelector: &applymetav1.LabelSelectorApplyConfiguration{
+									MatchExpressions: []applymetav1.LabelSelectorRequirementApplyConfiguration{
+										{
+											Key: func() *string {
+												v := "app"
+												return &v
+											}(),
+											Operator: func() *metav1.LabelSelectorOperator {
+												v := metav1.LabelSelectorOpIn
+												return &v
+											}(),
+											Values: []string{
+												"etcd",
+											},
+										},
+									},
+								},
+								Namespaces: []string{
+									namespace,
+								},
+								TopologyKey: func() *string {
+									v := "kubernetes.io/hostname"
+									return &v
+								}(),
+							},
+						},
+					},
+				},
+				Tolerations: []applycorev1.TolerationApplyConfiguration{
+					{
+						Key: func() *string {
+							v := "node.kubernetes.io/not-ready"
+							return &v
+						}(),
+						Operator: func() *corev1.TolerationOperator {
+							v := corev1.TolerationOpExists
+							return &v
+						}(),
+						Effect: func() *corev1.TaintEffect {
+							v := corev1.TaintEffectNoExecute
+							return &v
+						}(),
+						TolerationSeconds: func() *int64 {
+							v := int64(1)
+							return &v
+						}(),
+					},
+					{
+						Key: func() *string {
+							v := "node.kubernetes.io/unreachable"
+							return &v
+						}(),
+						Operator: func() *corev1.TolerationOperator {
+							v := corev1.TolerationOpExists
+							return &v
+						}(),
+						Effect: func() *corev1.TaintEffect {
+							v := corev1.TaintEffectNoExecute
+							return &v
+						}(),
+						TolerationSeconds: func() *int64 {
+							v := int64(1)
+							return &v
+						}(),
+					},
+				},
 			},
 		},
 		VolumeClaimTemplates: []applycorev1.PersistentVolumeClaimApplyConfiguration{
 			{
-				TypeMetaApplyConfiguration: applymetav1.TypeMetaApplyConfiguration{},
 				ObjectMetaApplyConfiguration: &applymetav1.ObjectMetaApplyConfiguration{
 					Name: func() *string {
-						name := "etcd-vol"
-						return &name
+						v := "data-vol"
+						return &v
 					}(),
 				},
 				Spec: &applycorev1.PersistentVolumeClaimSpecApplyConfiguration{
@@ -1794,6 +1826,24 @@ func ClusterCreate(c *gin.Context) {
 					Resources: &applycorev1.VolumeResourceRequirementsApplyConfiguration{
 						Requests: &corev1.ResourceList{
 							corev1.ResourceStorage: resource.MustParse("5Gi"),
+						},
+					},
+				},
+			},
+			{
+				ObjectMetaApplyConfiguration: &applymetav1.ObjectMetaApplyConfiguration{
+					Name: func() *string {
+						v := "cache-vol"
+						return &v
+					}(),
+				},
+				Spec: &applycorev1.PersistentVolumeClaimSpecApplyConfiguration{
+					AccessModes: []corev1.PersistentVolumeAccessMode{
+						corev1.ReadWriteOnce,
+					},
+					Resources: &applycorev1.VolumeResourceRequirementsApplyConfiguration{
+						Requests: &corev1.ResourceList{
+							corev1.ResourceStorage: resource.MustParse("1Gi"),
 						},
 					},
 				},
@@ -1812,38 +1862,40 @@ func ClusterCreate(c *gin.Context) {
 	}
 
 	// kube-apiserver deployment
-	apiservervolumeMount := append(volumeMount, applycorev1.VolumeMountApplyConfiguration{
-		Name: &kubeApiserverCM.Name,
-		MountPath: func() *string {
-			v := "/etc/kubernetes/encryption-config.yaml"
-			return &v
-		}(),
-		SubPath: func() *string {
-			v := "encryption-config.yaml"
-			return &v
-		}(),
-	})
-	apiservervolumeMount = append(apiservervolumeMount, applycorev1.VolumeMountApplyConfiguration{
-		Name: &kubeApiserverCM.Name,
-		MountPath: func() *string {
-			v := "/etc/kubernetes/audit-policy-minimal.yaml"
-			return &v
-		}(),
-		SubPath: func() *string {
-			v := "audit-policy-minimal.yaml"
-			return &v
-		}(),
-	})
-	apiservervolumeMount = append(apiservervolumeMount, applycorev1.VolumeMountApplyConfiguration{
-		Name: func() *string {
-			v := "audit-log-dir"
-			return &v
-		}(),
-		MountPath: func() *string {
-			v := "/var/log/kubernetes/"
-			return &v
-		}(),
-	})
+	apiservervolumeMount := append(volumeMount,
+		applycorev1.VolumeMountApplyConfiguration{
+			Name: &kubeApiserverCM.Name,
+			MountPath: func() *string {
+				v := "/etc/kubernetes/encryption-config.yaml"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "encryption-config.yaml"
+				return &v
+			}(),
+		},
+		applycorev1.VolumeMountApplyConfiguration{
+			Name: &kubeApiserverCM.Name,
+			MountPath: func() *string {
+				v := "/etc/kubernetes/audit-policy-minimal.yaml"
+				return &v
+			}(),
+			SubPath: func() *string {
+				v := "audit-policy-minimal.yaml"
+				return &v
+			}(),
+		},
+		applycorev1.VolumeMountApplyConfiguration{
+			Name: func() *string {
+				v := "audit-log-dir"
+				return &v
+			}(),
+			MountPath: func() *string {
+				v := "/var/log/kubernetes/"
+				return &v
+			}(),
+		},
+	)
 
 	_, err = kubeControl.Deployment().Apply(ns.Name, "kube-apiserver", &applyappsv1.DeploymentSpecApplyConfiguration{
 		Replicas: func() *int32 {
@@ -3000,6 +3052,10 @@ done`,
 	}
 
 	go plugin(kubeControl, info, namespace)
+
+	//// todo create kibana index pattern
+	//kib := kibana.New(viper.GetString("KIBANA_URL"))
+	//kib.Index().Create()
 
 	c.JSON(http.StatusOK, gin.H{
 		"cmd": nil,

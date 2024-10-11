@@ -63,6 +63,7 @@ func generateCert(CN string, NotBefore time.Time, NotAfter time.Time, publicKey 
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageKeyEncipherment,
 		BasicConstraintsValid: true,
 		IsCA:                  true,
+		DNSNames:              []string{CN},
 	}
 	return x509.CreateCertificate(rand.Reader, &rootTemplate, &rootTemplate, &publicKey.PublicKey, publicKey)
 }

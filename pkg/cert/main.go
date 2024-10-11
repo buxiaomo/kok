@@ -69,7 +69,7 @@ func (p cert) GenerateAll(y time.Duration, Project, Env, ExternalIp, ClusterDNS 
 		NotBefore:   NotBefore,
 		NotAfter:    NotAfter,
 		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	})
 
 	tl.SchedulerCrt, tl.SchedulerKey = signatureFromCA(tl.CaCrt, tl.CaKey, &x509.Certificate{
@@ -88,10 +88,12 @@ func (p cert) GenerateAll(y time.Duration, Project, Env, ExternalIp, ClusterDNS 
 			Organization: []string{"system:kube-controller-manager"},
 			CommonName:   "system:kube-controller-manager",
 		},
-		NotBefore:   NotBefore,
-		NotAfter:    NotAfter,
-		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		NotBefore:             NotBefore,
+		NotAfter:              NotAfter,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  false,
 	})
 
 	tl.ApiServerCrt, tl.ApiServerKey = signatureFromCA(tl.CaCrt, tl.CaKey, &x509.Certificate{
@@ -99,12 +101,14 @@ func (p cert) GenerateAll(y time.Duration, Project, Env, ExternalIp, ClusterDNS 
 			Organization: []string{"Kubernetes"},
 			CommonName:   "kube-apiserver",
 		},
-		NotBefore:   NotBefore,
-		NotAfter:    NotAfter,
-		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		DNSNames:    []string{"kube-apiserver", "localhost", "kubernetes", "kubernetes.default", "kubernetes.default.svc", "kubernetes.default.svc.cluster", "kubernetes.default.svc.cluster.local"},
-		IPAddresses: []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1"), net.ParseIP(ExternalIp), net.ParseIP(ClusterDNS)},
+		NotBefore:             NotBefore,
+		NotAfter:              NotAfter,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		DNSNames:              []string{"kube-apiserver", "localhost", "kubernetes", "kubernetes.default", "kubernetes.default.svc", "kubernetes.default.svc.cluster", "kubernetes.default.svc.cluster.local"},
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1"), net.ParseIP(ExternalIp), net.ParseIP(ClusterDNS)},
+		BasicConstraintsValid: true,
+		IsCA:                  false,
 	})
 
 	tl.EtcdCrt, tl.EtcdKey = signature("etcd-ca", NotBefore, NotAfter)
@@ -124,6 +128,8 @@ func (p cert) GenerateAll(y time.Duration, Project, Env, ExternalIp, ClusterDNS 
 			net.ParseIP("127.0.0.1"),
 			net.ParseIP("::1"),
 		},
+		BasicConstraintsValid: true,
+		IsCA:                  false,
 	})
 	tl.EtcdPeerCrt, tl.EtcdPeerKey = signatureFromCA(tl.EtcdCrt, tl.EtcdKey, &x509.Certificate{
 		NotBefore:   NotBefore,
@@ -141,36 +147,44 @@ func (p cert) GenerateAll(y time.Duration, Project, Env, ExternalIp, ClusterDNS 
 			net.ParseIP("127.0.0.1"),
 			net.ParseIP("::1"),
 		},
+		BasicConstraintsValid: true,
+		IsCA:                  false,
 	})
 	tl.EtcdHealthcheckClientCrt, tl.EtcdHealthcheckClientKey = signatureFromCA(tl.EtcdCrt, tl.EtcdKey, &x509.Certificate{
 		Subject: pkix.Name{
 			Organization: []string{"system:masters"},
 			CommonName:   "kube-etcd-healthcheck-client",
 		},
-		NotBefore:   NotBefore,
-		NotAfter:    NotAfter,
-		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		NotBefore:             NotBefore,
+		NotAfter:              NotAfter,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  false,
 	})
 	tl.ApiserverKubeletClientCrt, tl.ApiserverKubeletClientKey = signatureFromCA(tl.EtcdCrt, tl.EtcdKey, &x509.Certificate{
 		Subject: pkix.Name{
 			Organization: []string{"system:masters"},
 			CommonName:   "kube-apiserver-kubelet-client",
 		},
-		NotBefore:   NotBefore,
-		NotAfter:    NotAfter,
-		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		NotBefore:             NotBefore,
+		NotAfter:              NotAfter,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  false,
 	})
 	tl.ApiserverEtcdClientCrt, tl.ApiserverEtcdClientKey = signatureFromCA(tl.EtcdCrt, tl.EtcdKey, &x509.Certificate{
 		Subject: pkix.Name{
 			Organization: []string{"system:masters"},
 			CommonName:   "apiserver-etcd-client",
 		},
-		NotBefore:   NotBefore,
-		NotAfter:    NotAfter,
-		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		NotBefore:             NotBefore,
+		NotAfter:              NotAfter,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  false,
 	})
 
 	tl.FrontProxyCrt, tl.FrontProxyKey = signature("front-proxy-ca", NotBefore, NotAfter)
@@ -179,6 +193,12 @@ func (p cert) GenerateAll(y time.Duration, Project, Env, ExternalIp, ClusterDNS 
 		NotAfter:    NotAfter,
 		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		//DNSNames:              []string{"front-proxy-client"},
+		BasicConstraintsValid: true,
+		Subject: pkix.Name{
+			CommonName: "front-proxy-client",
+		},
+		IsCA: false,
 	})
 
 	return tl

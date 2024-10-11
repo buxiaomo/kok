@@ -33,8 +33,8 @@ func (app ca) Signature(years int, cn, name string) {
 	derBytes, err := x509.CreateCertificate(rand.Reader,
 		&x509.Certificate{
 			SerialNumber: serialNumber,
-			Subject: pkix.Name{
-				CommonName: cn,
+			Subject:      pkix.Name{
+				//CommonName: cn,
 			},
 			Issuer: pkix.Name{
 				CommonName: cn,
@@ -68,7 +68,7 @@ func (app ca) Signature(years int, cn, name string) {
 		panic(err)
 	}
 	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
-	certOut.Close()
+	//certOut.Close()
 
 	// 保存私钥到文件
 	keyOut, err := os.Create(fmt.Sprintf("%s/%s.key", app.path, name))
@@ -77,5 +77,5 @@ func (app ca) Signature(years int, cn, name string) {
 	}
 
 	pem.Encode(keyOut, &pem.Block{Type: "EC PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
-	keyOut.Close()
+	//keyOut.Close()
 }
