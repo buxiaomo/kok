@@ -3079,6 +3079,7 @@ func ClusterDelete(c *gin.Context) {
 		kubeControl.ClusterRoles().Delete(fmt.Sprintf("application:control-plane:%s:prometheus", namespace))
 		kubeControl.ServiceAccount().Delete(ns.Name, "prometheus")
 		kubeControl.ConfigMaps().Delete(ns.Name, "prometheus")
+		kubeControl.Service().Delete(ns.Name, "prometheus")
 	}
 
 	am := appmarket.New("")
@@ -3089,13 +3090,21 @@ func ClusterDelete(c *gin.Context) {
 	kubeControl.Deployment().Delete(ns.Name, "kube-scheduler")
 	kubeControl.Deployment().Delete(ns.Name, "kube-controller-manager")
 	kubeControl.Deployment().Delete(ns.Name, "kube-apiserver")
+
 	kubeControl.StatefulSets().Delete(ns.Name, "etcd")
+
 	kubeControl.Service().Delete(ns.Name, "kube-apiserver")
 	kubeControl.Service().Delete(ns.Name, "etcd")
+	kubeControl.Service().Delete(ns.Name, "kube-controller-manager")
+	kubeControl.Service().Delete(ns.Name, "kube-scheduler")
+
 	kubeControl.ConfigMaps().Delete(ns.Name, "kubeconfig")
 	kubeControl.ConfigMaps().Delete(ns.Name, "kube-apiserver")
+	kubeControl.ConfigMaps().Delete(ns.Name, "remote-access")
+	kubeControl.ConfigMaps().Delete(ns.Name, "cluster-ca")
 
 	kubeControl.Roles().Delete(ns.Name, "application:control-plane:etcd")
+	kubeControl.RoleBindings().Delete(ns.Name, "application:control-plane:etcd")
 	kubeControl.ServiceAccount().Delete(ns.Name, "etcd")
 	kubeControl.Namespace().Delete(ns.Name)
 

@@ -21,6 +21,10 @@ type rolebindings struct {
 	ctx       context.Context
 }
 
+func (t rolebindings) Delete(namespace, name string) error {
+	return t.clientset.RbacV1().RoleBindings(namespace).Delete(t.ctx, name, metav1.DeleteOptions{})
+}
+
 func (t rolebindings) Apply(namespace, name string, Subjects []applyrbacv1.SubjectApplyConfiguration, RoleRef *applyrbacv1.RoleRefApplyConfiguration) (result *v1.RoleBinding, err error) {
 	return t.clientset.RbacV1().RoleBindings(namespace).Apply(t.ctx, &applyrbacv1.RoleBindingApplyConfiguration{
 		TypeMetaApplyConfiguration: applymetav1.TypeMetaApplyConfiguration{
