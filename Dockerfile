@@ -9,14 +9,14 @@ COPY . /go/src/app/
 RUN CGO_ENABLED=1 GO111MODULE=on GOOS=linux go build -o main main.go
 
 FROM alpine:3.20.3
-RUN apk add --no-cache curl \
+RUN apk add --no-cache curl bash \
     && adduser -D -h /app -u 1000 app
 WORKDIR /app
-COPY --from=builder /go/src/app/main ./main
-COPY --from=builder /go/src/app/templates ./templates
-COPY --from=builder /go/src/app/appmarket ./appmarket
-COPY --from=builder /go/src/app/static ./static
-COPY --from=builder /usr/local/bin/helm /usr/local/bin/helm
+COPY --from=builder --chown=1000 /go/src/app/main ./main
+COPY --from=builder --chown=1000 /go/src/app/templates ./templates
+COPY --from=builder --chown=1000 /go/src/app/appmarket ./appmarket
+COPY --from=builder --chown=1000 /go/src/app/static ./static
+COPY --from=builder --chown=1000 /usr/local/bin/helm /usr/local/bin/helm
 COPY entrypoint.sh /entrypoint.sh
 VOLUME /app/data
 EXPOSE 8080
