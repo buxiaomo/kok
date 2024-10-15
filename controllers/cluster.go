@@ -320,7 +320,7 @@ func ClusterMonitor(c *gin.Context) {
 	ns, err := localkubeControl.Namespace().Get(name)
 
 	remoteAppMarket := appmarket.New(fmt.Sprintf("./data/kubeconfig/%s.kubeconfig", name))
-	remoteAppMarket.Chart().Install("kube-system", "prometheus", "prometheus", false, "1.0.0", map[string]interface{}{
+	remoteAppMarket.Chart().Install("kube-system", "prometheus", "prometheus", false, "2.54.1", map[string]interface{}{
 		"replicaCount": 1,
 		"remoteWrite":  viper.GetString("PROMETHEUS_URL"),
 		"clusterName":  ns.Labels["project"],
