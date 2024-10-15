@@ -69,6 +69,7 @@ func SetupRouter() *gin.Engine {
 		private.GET("/version", controllers.VersionPages)
 		private.DELETE("/version", controllers.DeleteVersion)
 		private.POST("/version", controllers.CreateVersion)
+		private.GET("/cluster/kubeconfig", controllers.Kubeconfig)
 		private.GET("/cluster/status", controllers.ClusterStatus)
 		private.PUT("/cluster/monitor", controllers.ClusterMonitor)
 		private.POST("/cluster", controllers.ClusterCreate)

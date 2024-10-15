@@ -34,6 +34,26 @@ import (
 	"time"
 )
 
+func Kubeconfig(c *gin.Context) {
+	name := c.Query("name")
+	fmt.Println(name)
+	kubeControl := control.New("")
+	ns, _ := kubeControl.Namespace().Get(name)
+	cm, _ := kubeControl.ConfigMaps().Get(ns.Name, "cluster-ca")
+
+	kubeconfig, _ := cert.CreateKubeconfigFileForRestConfig(rest.Config{
+		Host: fmt.Sprintf("https://%s:6443", ns.Labels["loadBalancer"]),
+		TLSClientConfig: rest.TLSClientConfig{
+			Insecure: false,
+			CAData:   []byte(cm.Data["ca.crt"]),
+			CertData: []byte(cm.Data["admin.crt"]),
+			KeyData:  []byte(cm.Data["admin.key"]),
+		},
+	}, fmt.Sprintf("./data/kubeconfig/%s.kubeconfig", ns.Name))
+	//c.JSON(http.StatusOK, gin.H{})
+	c.String(http.StatusOK, string(kubeconfig))
+}
+
 func kubeApiserverCfg(project, env string) map[string]string {
 	u, err := url.Parse(viper.GetString("ELASTICSEARCH_URL"))
 	if err != nil {

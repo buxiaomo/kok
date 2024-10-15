@@ -66,10 +66,12 @@ func (p cert) GenerateAll(y time.Duration, Project, Env, ExternalIp, ClusterDNS 
 			Organization: []string{"system:masters"},
 			CommonName:   "kubernetes-admin",
 		},
-		NotBefore:   NotBefore,
-		NotAfter:    NotAfter,
-		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		NotBefore:             NotBefore,
+		NotAfter:              NotAfter,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		IsCA:                  false,
+		BasicConstraintsValid: true,
 	})
 
 	tl.SchedulerCrt, tl.SchedulerKey = signatureFromCA(tl.CaCrt, tl.CaKey, &x509.Certificate{
@@ -162,7 +164,7 @@ func (p cert) GenerateAll(y time.Duration, Project, Env, ExternalIp, ClusterDNS 
 		BasicConstraintsValid: true,
 		IsCA:                  false,
 	})
-	tl.ApiserverKubeletClientCrt, tl.ApiserverKubeletClientKey = signatureFromCA(tl.EtcdCrt, tl.EtcdKey, &x509.Certificate{
+	tl.ApiserverKubeletClientCrt, tl.ApiserverKubeletClientKey = signatureFromCA(tl.CaCrt, tl.CaKey, &x509.Certificate{
 		Subject: pkix.Name{
 			Organization: []string{"system:masters"},
 			CommonName:   "kube-apiserver-kubelet-client",
