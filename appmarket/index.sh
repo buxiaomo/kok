@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -x
-rm -rf $(dirname $0)/assets/*
+pushd $(dirname $0)
+rm -rf ./assets/*
 mkdir -p ./assets
 pushd ./charts >/dev/null 2>&1
 for dir in $(ls .);do
