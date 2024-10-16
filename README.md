@@ -51,6 +51,8 @@ sudo bin/cloud-provider-kind
 
 helm upgrade -i kok ./kok -n kok --create-namespace
 
+kubectl get svc -n kok
+
 # get EXTERNAL-IP and redeploy
 helm upgrade -i kok ./kok -n kok --create-namespace \
 --set prometheus.url=http://<EXTERNAL-IP>:9090  \
