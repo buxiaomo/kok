@@ -2,7 +2,7 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 hub: "buxiaomo/kok"
-tag: "1.0.12"
+tag: "1.1.0"
 
 database:
   type: "sqlite"
