@@ -3149,7 +3149,7 @@ func ClusterDelete(c *gin.Context) {
 		Resource: "clusterfluentdconfigs",
 	})
 
-	filename := fmt.Sprintf("./kubeconfig/%s.kubeconfig", ns.Name)
+	filename := fmt.Sprintf("./data/kubeconfig/%s.kubeconfig", ns.Name)
 	_, err = os.Stat(filename)
 	if err == nil {
 		_ = os.RemoveAll(filename)
