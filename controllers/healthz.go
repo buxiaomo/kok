@@ -8,7 +8,7 @@ import (
 
 func Healthz(c *gin.Context) {
 	if err := db.Healthz(); err != nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"msg": "cache connection exception"})
+		c.JSON(http.StatusServiceUnavailable, gin.H{"msg": err.Error()})
 		return
 	}
 	c.Status(http.StatusOK)

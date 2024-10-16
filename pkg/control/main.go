@@ -51,6 +51,26 @@ func (c Kc) HasDefaultSC() bool {
 }
 
 func (c Kc) ClearPodOnFaultyNode() error {
+	//Informer := informers.NewSharedInformerFactory(c.clientset, time.Second*30).Core().V1().Nodes().Informer()
+	//Informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	//	AddFunc: func(obj interface{}) {
+	//
+	//	},
+	//	DeleteFunc: func(obj interface{}) {
+	//
+	//	},
+	//	UpdateFunc: func(oldObj, newObj interface{}) {
+	//		node := newObj.Object.(*corev1.Node)
+	//	},
+	//})
+	//stop := make(chan struct{})
+	//defer close(stop)
+	//Informer.Run(stop)
+	////Informer.Start()
+	//for {
+	//	time.Sleep(time.Second)
+	//}
+
 	w, err := c.Nodes().Watch()
 	if err != nil {
 		return err
@@ -84,5 +104,7 @@ func (c Kc) ClearPodOnFaultyNode() error {
 			fmt.Printf("Error: %v\n", event.Object)
 		}
 	}
+
+	select {}
 	return err
 }

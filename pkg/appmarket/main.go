@@ -5,7 +5,6 @@ import (
 	"github.com/hashicorp/go-version"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/kube"
 	"helm.sh/helm/v3/pkg/repo"
 	"log"
@@ -14,28 +13,35 @@ import (
 type appMark struct {
 	kubeconfig string
 	cfg        *action.Configuration
+	//settings   *cli.EnvSettings
 }
 
 func New(kubeconfig string) *appMark {
 	actionConfig := new(action.Configuration)
-	settings := cli.New()
-	if err := actionConfig.Init(kube.GetConfig(kubeconfig, "", "kube-system"), settings.Namespace(), "secret", func(format string, v ...interface{}) {
+	//settings := cli.New()
+	if err := actionConfig.Init(kube.GetConfig(kubeconfig, "", "kube-system"), "kube-system", "secret", func(format string, v ...interface{}) {
 		fmt.Sprintf(format, v)
 	}); err != nil {
 		panic(err.Error())
 	}
 	return &appMark{
-		cfg: actionConfig,
+		kubeconfig: kubeconfig,
+		cfg:        actionConfig,
+		//settings:   settings,
 	}
 }
 
 type chart struct {
-	cfg *action.Configuration
+	kubeconfig string
+	cfg        *action.Configuration
+	//settings   *cli.EnvSettings
 }
 
 func (app appMark) Chart() chart {
 	return chart{
-		app.cfg,
+		cfg:        app.cfg,
+		kubeconfig: app.kubeconfig,
+		//settings:   app.settings,
 	}
 }
 
@@ -77,6 +83,8 @@ func (app chart) Search(name, kubeVersion string) (chats []Chart) {
 }
 
 func (app chart) Install(namespace, releaseName, chatName string, GenerateName bool, version string, vals map[string]interface{}) error {
+	//app.settings.SetNamespace(namespace)
+
 	chatPath := fmt.Sprintf("./appmarket/assets/%s/%s-%s.tgz", chatName, chatName, version)
 	chart, err := loader.Load(chatPath)
 	if err != nil {
@@ -93,9 +101,11 @@ func (app chart) Install(namespace, releaseName, chatName string, GenerateName b
 		client.Namespace = namespace
 		rel, err := client.Run(chart, vals)
 		if err != nil {
+			fmt.Println(client)
 			log.Printf(err.Error())
 			return err
 		}
+		//fmt.Println(rel)
 		log.Printf("Installed Chart from path: %s in namespace: %s\n", rel.Name, rel.Namespace)
 		return nil
 	}

@@ -31,7 +31,8 @@ func init() {
 	if !kc.HasDefaultSC() {
 		panic("cluster not has default storageclass!")
 	}
-	go kc.ClearPodOnFaultyNode()
+
+	//go kc.ClearPodOnFaultyNode()
 
 	models.ConnectDB(viper.GetString("DB_TYPE"), viper.GetString("DB_URL"))
 }

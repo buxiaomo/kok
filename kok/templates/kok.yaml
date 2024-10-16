@@ -13,56 +13,52 @@ rules:
       - "apps"
     resources:
       - deployments
+      - statefulsets
     verbs:
+      - get
       - delete
       - create
       - patch
-  - apiGroups:
-      - ""
-    resources:
-      - pods
-    verbs:
-      - list
-      - delete
   - apiGroups:
       - ""
     resources:
       - namespaces
-    verbs:
-      - patch
-      - create
-      - delete
-  - apiGroups:
-      - ""
-    resources:
+      - serviceaccounts
+      - pods
       - services
-    verbs:
-      - delete
-      - create
-      - patch
-      - get
-  - apiGroups:
-      - ""
-    resources:
       - persistentvolumeclaims
-    verbs:
-      - delete
-      - create
-      - patch
-  - apiGroups:
-      - ""
-    resources:
       - configmaps
+      - secrets
     verbs:
-      - delete
-      - create
+      - get
+      - list
       - patch
+      - create
+      - delete
   - apiGroups:
       - "storage.k8s.io"
     resources:
       - storageclasses
     verbs:
       - list
+  - apiGroups:
+      - "rbac.authorization.k8s.io"
+    resources:
+      - roles
+      - rolebindings
+    verbs:
+      - delete
+      - create
+      - patch
+  - apiGroups:
+      - "fluentd.fluent.io"
+    resources:
+      - clusteroutputs
+      - clusterfluentdconfigs
+    verbs:
+      - delete
+      - create
+      - patch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -91,6 +87,21 @@ spec:
       port: 8080
       targetPort: 8080
 ---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: kok-vol
+  labels:
+    app: kok-vol
+spec:
+  storageClassName: nfs-client
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -108,18 +119,17 @@ spec:
         app: kok
     spec:
       volumes:
-        - name: conf-vol
+        - name: kok-vol
           persistentVolumeClaim:
-            claimName: conf-vol
+            claimName: kok-vol
       serviceAccount: kok
       containers:
         - name: kok
           image: "{{ .Values.hub }}:{{ .Values.tag }}"
           imagePullPolicy: Always
           volumeMounts:
-            - name: conf-vol
-              subPath: conf-vol
-              mountPath: /etc/prometheus/conf.d
+            - name: kok-vol
+              mountPath: /app/data
           ports:
             - name: tcp-8080
               containerPort: 8080

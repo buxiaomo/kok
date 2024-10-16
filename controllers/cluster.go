@@ -152,7 +152,8 @@ rules:
 	}
 }
 
-func controlLog(kubeControl *control.Kc, ns *corev1.Namespace) error {
+func controlLog(ns *corev1.Namespace) error {
+	kubeControl := control.New("")
 	u, err := url.Parse(viper.GetString("ELASTICSEARCH_URL"))
 	if err != nil {
 		return err
@@ -227,9 +228,13 @@ func controlLog(kubeControl *control.Kc, ns *corev1.Namespace) error {
 	return nil
 }
 
-func plugin(remoteKubeControl *control.Kc, info createInfo, namespace string) {
-	err := waitForClusterReady(remoteKubeControl, namespace)
-	ns, _ := remoteKubeControl.Namespace().Get(namespace)
+func plugin(info createInfo, namespace string) {
+
+	err := waitForClusterReady(namespace)
+
+	kubeControl := control.New("")
+
+	ns, _ := kubeControl.Namespace().Get(namespace)
 	if err == nil {
 		remoteAppMarket := appmarket.New(fmt.Sprintf("./data/kubeconfig/%s.kubeconfig", namespace))
 
@@ -282,7 +287,9 @@ func plugin(remoteKubeControl *control.Kc, info createInfo, namespace string) {
 	}
 }
 
-func waitForClusterReady(kubeControl *control.Kc, namespace string) (err error) {
+func waitForClusterReady(namespace string) (err error) {
+	kubeControl := control.New("")
+
 	timeout := time.After(time.Minute * 15)
 	finish := make(chan bool)
 	count := 1
@@ -320,12 +327,15 @@ func ClusterMonitor(c *gin.Context) {
 	ns, err := localkubeControl.Namespace().Get(name)
 
 	remoteAppMarket := appmarket.New(fmt.Sprintf("./data/kubeconfig/%s.kubeconfig", name))
-	remoteAppMarket.Chart().Install("kube-system", "prometheus", "prometheus", false, "2.54.1", map[string]interface{}{
+	err = remoteAppMarket.Chart().Install("kube-system", "prometheus", "prometheus", false, "2.54.1", map[string]interface{}{
 		"replicaCount": 1,
 		"remoteWrite":  viper.GetString("PROMETHEUS_URL"),
 		"clusterName":  ns.Labels["project"],
 		"clusterEnv":   ns.Labels["env"],
 	})
+	if err != nil {
+		panic(fmt.Sprintf("Install proetheus on the remote cluster err: %s", err))
+	}
 
 	sa, err := remoteKubeControl.ServiceAccount().Get("kube-system", "prometheus")
 	if err != nil {
@@ -3065,13 +3075,13 @@ done`,
 		panic(err)
 	}
 
-	err = controlLog(kubeControl, ns)
+	err = controlLog(ns)
 
 	if err != nil {
 		fmt.Println(fmt.Sprintf("crd error: %s", err.Error()))
 	}
 
-	go plugin(kubeControl, info, namespace)
+	go plugin(info, ns.Name)
 
 	//// todo create kibana index pattern
 	//kib := kibana.New(viper.GetString("KIBANA_URL"))
