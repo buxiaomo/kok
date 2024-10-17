@@ -128,24 +128,44 @@ swapoff -a
 echo "-> Install CNI."
 # Install CNI
 mkdir -p /opt/cni/bin
-wget https://github.com/containernetworking/plugins/releases/download/v1.5.1/cni-plugins-linux-amd64-v1.5.1.tgz -O /usr/local/src/cni-plugins-linux-amd64-v1.5.1.tgz
-tar -zxf /usr/local/src/cni-plugins-linux-amd64-v1.5.1.tgz --exclude LICENSE --exclude README.md -C /opt/cni/bin
+if [ $(uname -m) == "x86_64" ];then
+  wget https://github.com/containernetworking/plugins/releases/download/v1.5.1/cni-plugins-linux-amd64-v1.5.1.tgz -O /usr/local/src/cni-plugins-linux-amd64-v1.5.1.tgz
+  tar -zxf /usr/local/src/cni-plugins-linux-amd64-v1.5.1.tgz --exclude LICENSE --exclude README.md -C /opt/cni/bin
+elif [ $(uname -m) == "aarch64" ]; then
+  wget https://github.com/containernetworking/plugins/releases/download/v1.6.0/cni-plugins-linux-arm64-v1.6.0.tgz -O /usr/local/src/cni-plugins-linux-arm64-v1.5.1.tgz
+  tar -zxf /usr/local/src/cni-plugins-linux-arm64-v1.5.1.tgz --exclude LICENSE --exclude README.md -C /opt/cni/bin
+fi
 
 echo "-> Install Runc."
-# Install runc
-wget https://github.com/opencontainers/runc/releases/download/v{{ .Runc }}/runc.amd64 -O /usr/local/bin/runc
+if [ $(uname -m) == "x86_64" ];then
+  wget https://github.com/opencontainers/runc/releases/download/v{{ .Runc }}/runc.amd64 -O /usr/local/bin/runc
+elif [ $(uname -m) == "aarch64" ]; then
+  wget https://github.com/opencontainers/runc/releases/download/v{{ .Runc }}/runc.arm64 -O /usr/local/bin/runc
+fi
+
 chmod +x /usr/local/bin/runc
 
 echo "-> Install nerdctl."
-# Install nerdctl
-wget https://github.com/containerd/nerdctl/releases/download/v1.7.7/nerdctl-1.7.7-linux-amd64.tar.gz -O /usr/local/src/nerdctl-1.7.7-linux-amd64.tar.gz
-tar -zxf /usr/local/src/nerdctl-1.7.7-linux-amd64.tar.gz -C /usr/local/bin nerdctl
+if [ $(uname -m) == "x86_64" ];then
+  wget https://github.com/containerd/nerdctl/releases/download/v1.7.7/nerdctl-1.7.7-linux-amd64.tar.gz -O /usr/local/src/nerdctl-1.7.7-linux-amd64.tar.gz
+  tar -zxf /usr/local/src/nerdctl-1.7.7-linux-amd64.tar.gz -C /usr/local/bin nerdctl
+elif [ $(uname -m) == "aarch64" ]; then
+  wget https://github.com/containerd/nerdctl/releases/download/v1.7.7/nerdctl-1.7.7-linux-arm64.tar.gz -O /usr/local/src/nerdctl-1.7.7-linux-arm64.tar.gz
+  tar -zxf /usr/local/src/nerdctl-1.7.7-linux-arm64.tar.gz -C /usr/local/bin nerdctl
+fi
+
 
 echo "-> Install Containerd."
 # Install containerd
 mkdir -p /etc/containerd
-wget https://github.com/containerd/containerd/releases/download/v{{ .Containerd }}/containerd-{{ .Containerd }}-linux-amd64.tar.gz -O /usr/local/src/containerd-{{ .Containerd }}-linux-amd64.tar.gz
-tar -zxf /usr/local/src/containerd-{{ .Containerd }}-linux-amd64.tar.gz --strip-components=1 -C /usr/local/bin
+if [ $(uname -m) == "x86_64" ];then
+  wget https://github.com/containerd/containerd/releases/download/v{{ .Containerd }}/containerd-{{ .Containerd }}-linux-amd64.tar.gz -O /usr/local/src/containerd-{{ .Containerd }}-linux-amd64.tar.gz
+  tar -zxf /usr/local/src/containerd-{{ .Containerd }}-linux-amd64.tar.gz --strip-components=1 -C /usr/local/bin
+elif [ $(uname -m) == "aarch64" ]; then
+  wget https://github.com/containerd/containerd/releases/download/v{{ .Containerd }}/containerd-{{ .Containerd }}-linux-arm64.tar.gz -O /usr/local/src/containerd-{{ .Containerd }}-linux-arm64.tar.gz
+  tar -zxf /usr/local/src/containerd-{{ .Containerd }}-linux-arm64.tar.gz --strip-components=1 -C /usr/local/bin
+fi
+
 cat >/etc/containerd/config.toml <<EOF
 version = 2
 root = "/data/containerd"
@@ -501,7 +521,11 @@ EOF
 # Install kubelet
 echo "-> Install kubelet."
 mkdir -p /var/lib/kubelet /etc/kubernetes/pki /etc/kubernetes/manifests
-wget https://dl.k8s.io/{{ .Kubernetes }}/bin/linux/amd64/kubelet -O /usr/local/bin/kubelet
+if [ $(uname -m) == "x86_64" ];then
+  wget https://dl.k8s.io/{{ .Kubernetes }}/bin/linux/amd64/kubelet -O /usr/local/bin/kubelet
+elif [ $(uname -m) == "aarch64" ]; then
+  wget https://dl.k8s.io/{{ .Kubernetes }}/bin/linux/arm64/kubelet -O /usr/local/bin/kubelet
+fi
 chmod +x /usr/local/bin/kubelet
 cat >/etc/kubernetes/pki/ca.crt <<EOF
 {{ .Ca }}EOF
@@ -682,7 +706,11 @@ EOF
 
 # Install kube-proxy
 echo "-> Install kube-proxy."
-wget https://dl.k8s.io/{{ .Kubernetes }}/bin/linux/amd64/kube-proxy -O /usr/local/bin/kube-proxy
+if [ $(uname -m) == "x86_64" ];then
+  wget https://dl.k8s.io/{{ .Kubernetes }}/bin/linux/amd64/kube-proxy -O /usr/local/bin/kube-proxy
+elif [ $(uname -m) == "aarch64" ]; then
+  wget https://dl.k8s.io/{{ .Kubernetes }}/bin/linux/arm64/kube-proxy -O /usr/local/bin/kube-proxy
+fi
 chmod +x /usr/local/bin/kube-proxy
 pushd /etc/kubernetes/pki
 openssl genrsa -out kube-proxy.key 2048
