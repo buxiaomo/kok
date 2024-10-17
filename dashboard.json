@@ -978,8 +978,7 @@
                 "value": null
               }
             ]
-          },
-          "unit": "percentunit"
+          }
         },
         "overrides": []
       },
@@ -1012,14 +1011,14 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(node_pressure_cpu_waiting_seconds_total{job=\"node-exporter\",clusterName=\"$clusterName\"}[$__rate_interval])",
+          "expr": "sum(node_load1{job=\"node-exporter\",clusterName=\"$clusterName\"}) by (instance) / count(node_cpu_seconds_total{job=\"node-exporter\",clusterName=\"$clusterName\", mode=\"system\"}) by (instance)",
           "instant": false,
           "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "CPU",
+      "title": "CPU Load 1m",
       "type": "timeseries"
     },
     {
@@ -1379,8 +1378,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1476,8 +1474,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1587,8 +1584,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1684,8 +1680,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2757,9 +2752,9 @@
           "value": "ae142s9nyapz4f"
         },
         "description": "datasource",
-        "hide": 1,
+        "hide": 0,
         "includeAll": false,
-        "label": "datasource",
+        "label": "Datasource",
         "multi": false,
         "name": "datasource",
         "options": [],
@@ -2809,6 +2804,6 @@
   "timezone": "browser",
   "title": "Kok Cluster",
   "uid": "adzbesqsoog74d",
-  "version": 4,
+  "version": 8,
   "weekStart": ""
 }
