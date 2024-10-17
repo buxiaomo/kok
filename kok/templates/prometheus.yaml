@@ -55,6 +55,12 @@ data:
     # - "second_rules.yml"
 
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
