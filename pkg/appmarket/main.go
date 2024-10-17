@@ -99,6 +99,7 @@ func (app chart) Install(namespace, releaseName, chatName string, GenerateName b
 		client.GenerateName = GenerateName
 		client.ReleaseName = releaseName
 		client.Namespace = namespace
+		client.CreateNamespace = true
 		rel, err := client.Run(chart, vals)
 		if err != nil {
 			fmt.Println(client)

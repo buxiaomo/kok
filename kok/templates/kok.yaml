@@ -23,7 +23,7 @@ rules:
       - ""
     resources:
       - namespaces
-      - serviceaccounts
+      - serviceaccount
       - pods
       - services
       - persistentvolumeclaims

@@ -3234,26 +3234,30 @@ func ClusterEnableHA(c *gin.Context) {
 
 func ClusterLog(c *gin.Context) {
 	name := c.Query("name")
-	kubeControl := control.New("")
-	sa, err := kubeControl.ServiceAccount().Apply(name, "event-exporter")
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"cmd": nil,
-			"msg": err.Error(),
-		})
-		return
-	}
-
-	cr, err := kubeControl.ClusterRoles().Apply("application:control-plane:event-exporter", []applyrbacv1.PolicyRuleApplyConfiguration{
-		{
-			Verbs:     []string{"get", "watch", "list"},
-			APIGroups: []string{"*"},
-			Resources: []string{"*"},
-		},
-		{
-			Verbs:     []string{"*"},
-			APIGroups: []string{"coordination.k8s.io"},
-			Resources: []string{"leases"},
+	remoteAppMarket := appmarket.New(fmt.Sprintf("./data/kubeconfig/%s.kubeconfig", name))
+	err := remoteAppMarket.Chart().Install("infra", "fluent-operator", "fluent-operator", false, "3.1.0", map[string]interface{}{
+		"containerRuntime": "containerd",
+		"fluentbit": map[string]interface{}{
+			"enable": false,
+			"input": map[string]interface{}{
+				"tail": map[string]interface{}{
+					"enable": false,
+				},
+				"systemd": map[string]interface{}{
+					"enable": false,
+				},
+			},
+			"filter": map[string]interface{}{
+				"kubernetes": map[string]interface{}{
+					"enable": false,
+				},
+				"containerd": map[string]interface{}{
+					"enable": false,
+				},
+				"systemd": map[string]interface{}{
+					"enable": false,
+				},
+			},
 		},
 	})
 	if err != nil {
@@ -3264,32 +3268,8 @@ func ClusterLog(c *gin.Context) {
 		return
 	}
 
-	_, err = kubeControl.ClusterRoleBindings().Apply("application:control-plane:event-exporter", []applyrbacv1.SubjectApplyConfiguration{
-		{
-			Kind: func() *string {
-				v := "ServiceAccount"
-				return &v
-			}(),
-			Name:      &sa.Name,
-			Namespace: &name,
-		},
-	}, &applyrbacv1.RoleRefApplyConfiguration{
-		APIGroup: func() *string {
-			v := "rbac.authorization.k8s.io"
-			return &v
-		}(),
-		Kind: func() *string {
-			v := "ClusterRole"
-			return &v
-		}(),
-		Name: &cr.Name,
+	c.JSON(http.StatusOK, gin.H{
+		"cmd": nil,
+		"msg": nil,
 	})
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"cmd": nil,
-			"msg": err.Error(),
-		})
-		return
-	}
-
 }

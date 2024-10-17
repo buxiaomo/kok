@@ -26,7 +26,7 @@ INSERT INTO version (id, kubernetes, etcd, containerd, runc, pause, coredns, met
 INSERT INTO version (id, kubernetes, etcd, containerd, runc, pause, coredns, metrics_server, kube_state_metrics) VALUES (10, 'v1.23.17', '3.5.1-0', '1.7.0', '1.1.4', '3.6', '1.8.6', '0.6.3', '2.6.0');
 INSERT INTO version (id, kubernetes, etcd, containerd, runc, pause, coredns, metrics_server, kube_state_metrics) VALUES (11, 'v1.24.17', '3.5.3-0', '1.7.6', '1.1.9', '3.6', '1.8.6', '0.6.4', '2.6.0');
 INSERT INTO version (id, kubernetes, etcd, containerd, runc, pause, coredns, metrics_server, kube_state_metrics) VALUES (12, 'v1.25.16', '3.5.4-0', '1.7.13', '1.1.12', '3.8', '1.9.3', '0.6.4', '2.7.0');
-INSERT INTO version (id, kubernetes, etcd, containerd, runc, pause, coredns, metrics_server, kube_state_metrics) VALUES (13, 'v1.26.15', '3.5.6-0', '1.7.18', '1.1.12', '3.9', '1.9.3', '0.7.2', '0.7.1');
+INSERT INTO version (id, kubernetes, etcd, containerd, runc, pause, coredns, metrics_server, kube_state_metrics) VALUES (13, 'v1.26.15', '3.5.6-0', '1.7.18', '1.1.12', '3.9', '1.9.3', '0.7.2', '2.9.2');
 INSERT INTO version (id, kubernetes, etcd, containerd, runc, pause, coredns, metrics_server, kube_state_metrics) VALUES (14, 'v1.27.16', '3.5.7-0', '1.7.23', '1.1.14', '3.9', '1.10.1', '0.7.2', '2.10.1');
 INSERT INTO version (id, kubernetes, etcd, containerd, runc, pause, coredns, metrics_server, kube_state_metrics) VALUES (15, 'v1.28.14', '3.5.9-0', '1.7.23', '1.1.14', '3.9', '1.10.1', '0.7.2', '2.11.0');
 INSERT INTO version (id, kubernetes, etcd, containerd, runc, pause, coredns, metrics_server, kube_state_metrics) VALUES (16, 'v1.29.9', '3.5.12-0', '1.7.23', '1.1.14', '3.9', '1.11.1', '0.7.2', '2.12.0');

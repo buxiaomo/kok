@@ -771,7 +771,8 @@ users:
       client-certificate: /etc/kubernetes/pki/kube-proxy.crt
       client-key: /etc/kubernetes/pki/kube-proxy.key
 EOF
-echo "-> Start service, please run 'kubectl get no' command on master check the node status."
+
 systemctl daemon-reload
 systemctl restart kube-proxy.service kubelet.service  containerd.service
 systemctl enable kube-proxy.service kubelet.service  containerd.service
+echo "-> Start service, please run 'kubectl get no' command on master check the node status."

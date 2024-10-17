@@ -9,7 +9,7 @@ COPY . /go/src/app/
 RUN CGO_ENABLED=1 GO111MODULE=on GOOS=linux go build -o main main.go
 
 FROM alpine:3.20.3
-RUN apk add --no-cache curl bash \
+RUN apk add --no-cache curl bash sqlite \
     && adduser -D -h /app -u 1000 app
 WORKDIR /app
 COPY --from=builder --chown=1000 /go/src/app/main ./main
