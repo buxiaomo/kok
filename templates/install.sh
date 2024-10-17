@@ -129,11 +129,11 @@ echo "-> Install CNI."
 # Install CNI
 mkdir -p /opt/cni/bin
 if [ $(uname -m) == "x86_64" ];then
-  wget https://github.com/containernetworking/plugins/releases/download/v1.5.1/cni-plugins-linux-amd64-v1.5.1.tgz -O /usr/local/src/cni-plugins-linux-amd64-v1.5.1.tgz
-  tar -zxf /usr/local/src/cni-plugins-linux-amd64-v1.5.1.tgz --exclude LICENSE --exclude README.md -C /opt/cni/bin
+  wget https://github.com/containernetworking/plugins/releases/download/v1.6.0/cni-plugins-linux-amd64-v1.6.0.tgz -O /usr/local/src/cni-plugins-linux-amd64-v1.6.0.tgz
+  tar -zxf /usr/local/src/cni-plugins-linux-amd64-v1.6.0.tgz --exclude LICENSE --exclude README.md -C /opt/cni/bin
 elif [ $(uname -m) == "aarch64" ]; then
-  wget https://github.com/containernetworking/plugins/releases/download/v1.6.0/cni-plugins-linux-arm64-v1.6.0.tgz -O /usr/local/src/cni-plugins-linux-arm64-v1.5.1.tgz
-  tar -zxf /usr/local/src/cni-plugins-linux-arm64-v1.5.1.tgz --exclude LICENSE --exclude README.md -C /opt/cni/bin
+  wget https://github.com/containernetworking/plugins/releases/download/v1.6.0/cni-plugins-linux-arm64-v1.6.0.tgz -O /usr/local/src/cni-plugins-linux-arm64-v1.6.0.tgz
+  tar -zxf /usr/local/src/cni-plugins-linux-arm64-v1.6.0.tgz --exclude LICENSE --exclude README.md -C /opt/cni/bin
 fi
 
 echo "-> Install Runc."
