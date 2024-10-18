@@ -55,8 +55,8 @@ kubectl get svc -n kok
 
 # get EXTERNAL-IP and redeploy
 helm upgrade -i kok ./kok -n kok --create-namespace \
---set prometheus.url=http://172.16.100.5:9090  \
---set elasticsearch.url=http://172.16.100.6:9200
+--set prometheus.url=http://<EXTERNAL-IP>:9090  \
+--set elasticsearch.url=http://<EXTERNAL-IP>:9200
 ```
 
 Now you can open the link to create the cluster
@@ -76,6 +76,7 @@ Now you can open the link to create the cluster
 
 ## Layout
 <img src="./img/main.png">
+<img src="./img/version.png">
 <img src="./img/kube-audit-log.png">
 <img src="./img/kube-event-log.png">
 <img src="./img/kube-control-plane-log.png">

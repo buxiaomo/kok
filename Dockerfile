@@ -17,8 +17,7 @@ RUN if [ `uname -m` = "x86_64" ]; then \
     else \
         wget -q https://dl.k8s.io/v1.31.1/bin/linux/arm64/kubectl -O /usr/local/bin/kubectl; \
     fi \
-    && kubectl completion bash | sudo tee /etc/bash_completion.d/kubectl > /dev/null \
-    && chmod a+r /etc/bash_completion.d/kubectl \
+    && echo 'source <(kubectl completion bash)' > /etc/profile.d/kubelet.sh \
     && chmod +x /usr/local/bin/kubectl
 COPY --from=builder --chown=1000 /go/src/app/main ./main
 COPY --from=builder --chown=1000 /go/src/app/templates ./templates

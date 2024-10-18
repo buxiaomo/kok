@@ -307,7 +307,6 @@ func plugin(info createInfo, namespace string) {
 					},
 					"metrics": map[string]interface{}{
 						"enableOpenMetrics": true,
-						"enabled":           "{dns,drop,tcp,flow,port-distribution,icmp,httpV2:exemplars=true;labelsContext=source_ip,source_namespace,source_workload,destination_ip,destination_namespace,destination_workload,traffic_direction}",
 					},
 				},
 				"prometheus": map[string]interface{}{
