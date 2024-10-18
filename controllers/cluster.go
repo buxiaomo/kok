@@ -255,6 +255,70 @@ func plugin(info createInfo, namespace string) {
 			remoteAppMarket.Chart().Install("kube-system", "antrea", "antrea", false, info.NetworkVersion, map[string]interface{}{
 				"subNet": info.PodCidr,
 			})
+		case "cilium":
+			remoteAppMarket.Chart().Install("kube-system", "cilium", "cilium", false, info.NetworkVersion, map[string]interface{}{
+				"installNoConntrackIptablesRules": true,
+				"externalIPs": map[string]interface{}{
+					"enabled": true,
+				},
+				"nodePort": map[string]interface{}{
+					"enabled": true,
+				},
+				"hostPort": map[string]interface{}{
+					"enabled": true,
+				},
+				"socketLB": map[string]interface{}{
+					"enabled": true,
+				},
+				"loadBalancer": map[string]interface{}{
+					"mode":         "snat",
+					"acceleration": "native",
+				},
+				"bpf": map[string]interface{}{
+					"masquerade": true,
+				},
+				"ipam": map[string]interface{}{
+					"operator": map[string]interface{}{
+						"clusterPoolIPv4PodCIDRList": []string{info.PodCidr},
+						"clusterPoolIPv4MaskSize":    24,
+					},
+				},
+				"bandwidthManager": map[string]interface{}{
+					"bbr": true,
+				},
+				"cni": map[string]interface{}{
+					"chainingMode": "portmap",
+				},
+				"cgroup": map[string]interface{}{
+					"autoMount": map[string]interface{}{
+						"enabled": false,
+					},
+				},
+				"securityContext": map[string]interface{}{
+					"privileged": true,
+				},
+				"hubble": map[string]interface{}{
+					"enabled": true,
+					"ui": map[string]interface{}{
+						"enabled": true,
+					},
+					"relay": map[string]interface{}{
+						"enabled": true,
+					},
+					"metrics": map[string]interface{}{
+						"enableOpenMetrics": true,
+						"enabled":           "{dns,drop,tcp,flow,port-distribution,icmp,httpV2:exemplars=true;labelsContext=source_ip,source_namespace,source_workload,destination_ip,destination_namespace,destination_workload,traffic_direction}",
+					},
+				},
+				"prometheus": map[string]interface{}{
+					"enabled": true,
+				},
+				"operator": map[string]interface{}{
+					"prometheus": map[string]interface{}{
+						"enabled": true,
+					},
+				},
+			})
 		case "none":
 			fmt.Println("network plugin is none, skip..")
 		}
