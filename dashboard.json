@@ -1109,7 +1109,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "node_memory_MemFree_bytes{job=\"node-exporter\"}",
+          "expr": "node_memory_MemFree_bytes{job=\"node-exporter\",clusterName=\"$clusterName\"}",
           "instant": false,
           "legendFormat": "{{instance}}",
           "range": true,
@@ -1378,7 +1378,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1474,7 +1475,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1584,7 +1586,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1680,7 +1683,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1790,7 +1794,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1886,7 +1891,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1996,7 +2002,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2092,7 +2099,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2202,7 +2210,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2298,7 +2307,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2408,7 +2418,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2504,7 +2515,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2590,7 +2602,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red"
+                "color": "red",
+                "value": null
               },
               {
                 "color": "green",
@@ -2692,7 +2705,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2749,7 +2763,7 @@
         "current": {
           "selected": false,
           "text": "prometheus",
-          "value": "ae142s9nyapz4f"
+          "value": "fe14jox2q7w1sd"
         },
         "description": "datasource",
         "hide": 0,
@@ -2767,9 +2781,9 @@
       },
       {
         "current": {
-          "selected": false,
-          "text": "see-noprod",
-          "value": "see-noprod"
+          "selected": true,
+          "text": "ittzp-noprod",
+          "value": "ittzp-noprod"
         },
         "datasource": {
           "type": "prometheus",
@@ -2804,6 +2818,6 @@
   "timezone": "browser",
   "title": "Kok Cluster",
   "uid": "adzbesqsoog74d",
-  "version": 8,
+  "version": 1,
   "weekStart": ""
 }
