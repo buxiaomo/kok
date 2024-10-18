@@ -9,9 +9,17 @@ COPY . /go/src/app/
 RUN CGO_ENABLED=1 GO111MODULE=on GOOS=linux go build -o main main.go
 
 FROM alpine:3.20.3
-RUN apk add --no-cache curl bash sqlite \
+RUN apk add --no-cache curl bash sqlite bash-completion \
     && adduser -D -h /app -u 1000 app
 WORKDIR /app
+RUN if [ `uname -m` = "x86_64" ]; then \
+        wget -q https://dl.k8s.io/v1.31.1/bin/linux/amd64/kubectl -O /usr/local/bin/kubectl;  \
+    else \
+        wget -q https://dl.k8s.io/v1.31.1/bin/linux/arm64/kubectl -O /usr/local/bin/kubectl; \
+    fi \
+    && kubectl completion bash | sudo tee /etc/bash_completion.d/kubectl > /dev/null \
+    && chmod a+r /etc/bash_completion.d/kubectl \
+    && chmod +x /usr/local/bin/kubectl
 COPY --from=builder --chown=1000 /go/src/app/main ./main
 COPY --from=builder --chown=1000 /go/src/app/templates ./templates
 COPY --from=builder --chown=1000 /go/src/app/appmarket ./appmarket
