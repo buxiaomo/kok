@@ -10,7 +10,7 @@ spec:
     path: /var/log/containers/*.log
     parser: cri
     refreshIntervalSeconds: 10
-    memBufLimit: 5MB
+    memBufLimit: 100MB
     skipLongLines: true
     db: /fluent-bit/tail/containers.db
     dbSync: Normal
