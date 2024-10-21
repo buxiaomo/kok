@@ -74,6 +74,7 @@ func SetupRouter() *gin.Engine {
 		private.PUT("/cluster/monitor", controllers.ClusterMonitor)
 		private.PUT("/cluster/log", controllers.ClusterLog)
 		private.POST("/cluster", controllers.ClusterCreate)
+		private.GET("/cluster/appmarket", controllers.AppmarketList)
 		private.DELETE("/cluster", controllers.ClusterDelete)
 		private.GET("/appmarket", controllers.AppmarketGet)
 	}

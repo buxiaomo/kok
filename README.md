@@ -24,7 +24,9 @@ https://github.com/fluent/fluent-operator/releases/download/v3.2.0/fluent-operat
 
 Will be used to expose the kube-apiserver service and communicate with apiserver through this IP when adding nodes.
 
-* [metallb](https://github.com/metallb/metallb)
+* [MetalLB](https://github.com/metallb/metallb)
+
+* [OpenELB](https://github.com/openelb/openelb)
 
 ### StorageClass
 
@@ -32,6 +34,7 @@ Will be used to store individual cluster etcd data and certificate files.
 
 * [nfs-subdir-external-provisioner](https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner)
   > `kubectl patch storageclass nfs-client -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'`
+
 
 ## Quick start
 
@@ -61,6 +64,14 @@ helm upgrade -i kok ./kok -n kok --create-namespace \
 
 Now you can open the link to create the cluster
 * http://\<EXTERNAL-IP\>:8080/console/cluster
+
+## Merge kubeconfig
+
+```shell
+kubecm merge -f ./data/kubeconfig
+kubectl config get-contexts
+kubectl config use-context <Name>
+```
 
 ## Implemented
 * control-plane deployment

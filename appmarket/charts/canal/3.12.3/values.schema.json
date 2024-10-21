@@ -6,7 +6,7 @@
     "subNet": {
       "description": "ClusterIP CIDR range for Services",
       "type": "string",
-      "default": 1
+      "default": "10.244.0.0/16"
     }
   },
   "required": [

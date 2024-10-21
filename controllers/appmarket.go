@@ -6,6 +6,15 @@ import (
 	"net/http"
 )
 
+func AppmarketList(c *gin.Context) {
+	//am := appmarket.New("")
+	//am.Chart().Search()
+	c.HTML(http.StatusOK, "appmarket.html", gin.H{
+		"items":    "versions",
+		"instance": "instance",
+	})
+}
+
 func AppmarketGet(c *gin.Context) {
 	name := c.Query("name")
 	kubeVersion := c.Query("kubeVersion")

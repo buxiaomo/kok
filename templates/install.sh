@@ -714,7 +714,7 @@ fi
 chmod +x /usr/local/bin/kube-proxy
 pushd /etc/kubernetes/pki
 openssl genrsa -out kube-proxy.key 2048
-openssl req -new -key kube-proxy.key -subj "/CN=system:kube-proxy/O=system:node-proxier" -out kube-proxy.csr
+openssl req -new -key kube-proxy.key -subj "/CN=system:kube-proxy" -out kube-proxy.csr
 openssl x509 -req -in kube-proxy.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days 10000 -out kube-proxy.crt \
 -extfile <(printf "keyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=clientAuth\nsubjectAltName=DNS:$(hostname -f),IP:$(hostname -I | awk '{print $1}')")
 popd

@@ -19,6 +19,17 @@ RUN if [ `uname -m` = "x86_64" ]; then \
     fi \
     && echo 'source <(kubectl completion bash)' > /etc/profile.d/kubelet.sh \
     && chmod +x /usr/local/bin/kubectl
+
+RUN if [ `uname -m` = "x86_64" ]; then \
+        wget https://github.com/sunny0826/kubecm/releases/download/v0.31.0/kubecm_v0.31.0_Linux_x86_64.tar.gz -O /tmp/kubecm.tar.gz;  \
+    else \
+        wget https://github.com/sunny0826/kubecm/releases/download/v0.31.0/kubecm_v0.31.0_Linux_arm64.tar.gz -O /tmp/kubecm.tar.gz;  \
+    fi \
+    && tar -zvxf /tmp/kubecm.tar.gz -C /usr/local/bin/ kubecm \
+    && echo 'source <(kubecm completion bash)' > /etc/profile.d/kubecm.sh \
+    && chmod +x /usr/local/bin/kubecm \
+    && rm -rf /tmp/kubecm.tar.gz
+
 COPY --from=builder --chown=1000 /go/src/app/main ./main
 COPY --from=builder --chown=1000 /go/src/app/templates ./templates
 COPY --from=builder --chown=1000 /go/src/app/appmarket ./appmarket
