@@ -10,6 +10,7 @@ type Version struct {
 	Coredns          string `gorm:"size:25" json:"Coredns" binding:"required"`
 	MetricsServer    string `gorm:"size:25" json:"MetricsServer" binding:"required"`
 	KubeStateMetrics string `gorm:"size:25" json:"KubeStateMetrics" binding:"required"`
+	Dashboard        string `gorm:"size:25" json:"Dashboard" binding:"required"`
 }
 
 func (t *Version) Select(k8s string) (v Version, err error) {

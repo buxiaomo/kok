@@ -338,6 +338,17 @@ func plugin(info createInfo, namespace string) {
 			"replicaCount": 1,
 		})
 
+		remoteAppMarket.Chart().Install("kubernetes-dashboard", "kubernetes-dashboard", "kubernetes-dashboard", false, ns.Labels["dashboard"], map[string]interface{}{
+			"kong": map[string]interface{}{
+				"proxy": map[string]interface{}{
+					"type": "NodePort",
+					"http": map[string]interface{}{
+						"enabled": true,
+					},
+				},
+			},
+		})
+
 		localAppMarket := appmarket.New("")
 		localAppMarket.Chart().Install(namespace, fmt.Sprintf("event-exporter-%s", namespace), "event-exporter", false, "1.7.0", map[string]interface{}{
 			"clusterName": ns.Labels["project"],
@@ -847,6 +858,7 @@ func ClusterCreate(c *gin.Context) {
 			"CoreDNS":            vinfo.Coredns,
 			"metrics-server":     vinfo.MetricsServer,
 			"kube-state-metrics": vinfo.KubeStateMetrics,
+			"dashboard":          vinfo.Dashboard,
 		},
 	})
 	if err != nil {
