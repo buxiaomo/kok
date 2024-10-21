@@ -36,9 +36,12 @@ import (
 
 func Kubeconfig(c *gin.Context) {
 	name := c.Query("name")
-	fmt.Println(name)
 	kubeControl := control.New("")
-	ns, _ := kubeControl.Namespace().Get(name)
+	ns, err := kubeControl.Namespace().Get(name)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"msg": err.Error()})
+		return
+	}
 	cm, _ := kubeControl.ConfigMaps().Get(ns.Name, "cluster-ca")
 
 	kubeconfig, _ := cert.CreateKubeconfigFileForRestConfig(rest.Config{
@@ -819,7 +822,7 @@ func ClusterCreate(c *gin.Context) {
 
 	vinfo, err := v.Select(info.Version)
 	clusterDNS, _ := utils.GetCidrIpRange(info.ServiceCidr)
-
+	utils.Increment(clusterDNS).String()
 	namespace := fmt.Sprintf("%s-%s", info.Project, info.Env)
 
 	kubeControl := control.New("")

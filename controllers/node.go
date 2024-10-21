@@ -58,7 +58,7 @@ func NodeInit(c *gin.Context) {
 		Registry:      ns.Labels["registry"],
 		Kubernetes:    ns.Labels["kubernetes"],
 		LoadBalancer:  ns.Labels["loadBalancer"],
-		ClusterDNS:    minIp,
+		ClusterDNS:    utils.Increment(minIp).String(),
 		Pause:         ns.Labels["pause"],
 		ServiceSubnet: serviceSubnet,
 		Project:       ns.Labels["project"],

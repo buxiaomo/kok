@@ -67,8 +67,16 @@ Now you can open the link to create the cluster
 
 ## Merge kubeconfig
 
+exec to `kok` Pod.
+
 ```shell
-kubecm merge -f ./data/kubeconfig
+touch .kube/config
+ls ./data/kubeconfig/*.kubeconfig | xargs -I{} sh -c 'kubecm add -cf {} --context-name $(basename {} .kubeconfig)'
+
+# use control cluster
+kubectl config unset current-context
+
+# use controlled cluster
 kubectl config get-contexts
 kubectl config use-context <Name>
 ```

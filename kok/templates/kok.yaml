@@ -53,6 +53,7 @@ rules:
       - clusterroles
       - clusterrolebindings
     verbs:
+      - get
       - delete
       - create
       - patch

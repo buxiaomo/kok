@@ -35,6 +35,7 @@ func init() {
 	//go kc.ClearPodOnFaultyNode()
 
 	models.ConnectDB(viper.GetString("DB_TYPE"), viper.GetString("DB_URL"))
+
 }
 
 func main() {

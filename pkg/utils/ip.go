@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"github.com/seancfoley/ipaddress-go/ipaddr"
 	"strconv"
 	"strings"
 )
@@ -38,4 +39,9 @@ func GetCidrIpRange(cidr string) (string, string) {
 
 	return ipPrefix + strconv.Itoa(seg3MinIp) + "." + strconv.Itoa(seg4MinIp),
 		ipPrefix + strconv.Itoa(seg3MaxIp) + "." + strconv.Itoa(seg4MaxIp)
+}
+
+func Increment(addrString string) *ipaddr.IPAddress {
+	addr := ipaddr.NewIPAddressString(addrString).GetAddress()
+	return addr.Increment(1)
 }
