@@ -245,19 +245,19 @@ func GeneratePrivateKey(random io.Reader, bits int) (crypto.Signer, error) {
 	return rsa.GenerateKey(random, bits)
 }
 
-func CreateKubeconfigFileForRestConfig(restConfig rest.Config, path string) ([]byte, error) {
+func CreateKubeconfigFileForRestConfig(cluster, user string, restConfig rest.Config, path string) ([]byte, error) {
 	clusters := make(map[string]*clientcmdapi.Cluster)
-	clusters["kubernetes"] = &clientcmdapi.Cluster{
+	clusters[cluster] = &clientcmdapi.Cluster{
 		Server:                   restConfig.Host,
 		CertificateAuthorityData: restConfig.CAData,
 	}
 	contexts := make(map[string]*clientcmdapi.Context)
-	contexts["default"] = &clientcmdapi.Context{
-		Cluster:  "kubernetes",
-		AuthInfo: "admin",
+	contexts[fmt.Sprintf("%s@%s", user, cluster)] = &clientcmdapi.Context{
+		Cluster:  cluster,
+		AuthInfo: user,
 	}
 	authinfos := make(map[string]*clientcmdapi.AuthInfo)
-	authinfos["admin"] = &clientcmdapi.AuthInfo{
+	authinfos[user] = &clientcmdapi.AuthInfo{
 		ClientCertificateData: restConfig.CertData,
 		ClientKeyData:         restConfig.KeyData,
 	}
@@ -266,11 +266,11 @@ func CreateKubeconfigFileForRestConfig(restConfig rest.Config, path string) ([]b
 		APIVersion:     "v1",
 		Clusters:       clusters,
 		Contexts:       contexts,
-		CurrentContext: "default",
+		CurrentContext: fmt.Sprintf("%s@%s", user, cluster),
 		AuthInfos:      authinfos,
 	}
-	//kubeConfigFile, _ := os.CreateTemp("", "kubeconfig")
-	_ = clientcmd.WriteToFile(clientConfig, path)
+	if path != "" {
+		_ = clientcmd.WriteToFile(clientConfig, path)
+	}
 	return clientcmd.Write(clientConfig)
-	//return kubeConfigFile.Name()
 }

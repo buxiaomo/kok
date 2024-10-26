@@ -19,6 +19,7 @@ import (
 	applymetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	applyrbacv1 "k8s.io/client-go/applyconfigurations/rbac/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 	db "kok/models"
 	"kok/pkg/appmarket"
 	"kok/pkg/cert"
@@ -28,6 +29,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"text/template"
@@ -37,24 +39,40 @@ import (
 func Kubeconfig(c *gin.Context) {
 	name := c.Query("name")
 	kubeControl := control.New("")
-	ns, err := kubeControl.Namespace().Get(name)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"msg": err.Error()})
+	if name != "all" {
+		ns, err := kubeControl.Namespace().Get(name)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"msg": err.Error()})
+			return
+		}
+		cm, _ := kubeControl.ConfigMaps().Get(ns.Name, "cluster-ca")
+
+		kubeconfig, _ := cert.CreateKubeconfigFileForRestConfig("kubernetes", "admin", rest.Config{
+			Host: fmt.Sprintf("https://%s:6443", ns.Labels["loadBalancer"]),
+			TLSClientConfig: rest.TLSClientConfig{
+				Insecure: false,
+				CAData:   []byte(cm.Data["ca.crt"]),
+				CertData: []byte(cm.Data["admin.crt"]),
+				KeyData:  []byte(cm.Data["admin.key"]),
+			},
+		}, "")
+		c.String(http.StatusOK, string(kubeconfig))
 		return
 	}
-	cm, _ := kubeControl.ConfigMaps().Get(ns.Name, "cluster-ca")
 
-	kubeconfig, _ := cert.CreateKubeconfigFileForRestConfig(rest.Config{
-		Host: fmt.Sprintf("https://%s:6443", ns.Labels["loadBalancer"]),
-		TLSClientConfig: rest.TLSClientConfig{
-			Insecure: false,
-			CAData:   []byte(cm.Data["ca.crt"]),
-			CertData: []byte(cm.Data["admin.crt"]),
-			KeyData:  []byte(cm.Data["admin.key"]),
-		},
-	}, fmt.Sprintf("./data/kubeconfig/%s.kubeconfig", ns.Name))
-	//c.JSON(http.StatusOK, gin.H{})
-	c.String(http.StatusOK, string(kubeconfig))
+	if _, err := os.Stat("./data/kubeconfig/all.kubeconfig"); err == nil {
+		os.Remove("./data/kubeconfig/all.kubeconfig")
+	}
+	t, _ := os.Create("./data/kubeconfig/all.kubeconfig")
+	t.Close()
+	cmd := exec.Command("sh", "-c", "ls ./data/kubeconfig/*.kubeconfig | xargs -I{} sh -c 'kubecm --config ./data/kubeconfig/all.kubeconfig add -cf {} --context-name $(basename {} .kubeconfig)'")
+	err := cmd.Run()
+	if err != nil {
+		klog.Warningf("cmd.Run() failed with %s\n", err)
+	}
+	f, err := os.ReadFile("./data/kubeconfig/all.kubeconfig")
+	c.String(http.StatusOK, string(f))
+	return
 }
 
 func kubeApiserverCfg(project, env string) map[string]string {
@@ -980,7 +998,7 @@ func ClusterCreate(c *gin.Context) {
 		}
 	}
 
-	kubeconfig, err := cert.CreateKubeconfigFileForRestConfig(rest.Config{
+	kubeconfig, err := cert.CreateKubeconfigFileForRestConfig(ns.Name, fmt.Sprintf("%s-admin", ns.Name), rest.Config{
 		Host: fmt.Sprintf("https://%s:6443", lbAddr),
 		TLSClientConfig: rest.TLSClientConfig{
 			Insecure: false,
@@ -3230,7 +3248,7 @@ func ClusterDelete(c *gin.Context) {
 	filename := fmt.Sprintf("./data/kubeconfig/%s.kubeconfig", ns.Name)
 	_, err = os.Stat(filename)
 	if err == nil {
-		_ = os.RemoveAll(filename)
+		_ = os.Remove(filename)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
