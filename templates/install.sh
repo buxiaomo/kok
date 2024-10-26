@@ -1,30 +1,77 @@
 #!/bin/bash
 #set -x
 # apt-get install iptables ipvsadm ipset -y
+info_log(){
+  echo -e "\033[32m$1\033[0m"
+}
+error_log(){
+  echo -e "\033[31m$1\033[0m"
+}
+
 command_exists() {
 	command -v "$@" > /dev/null 2>&1
 }
 
-if ! command_exists iptables; then
-  cat >&2 <<-'EOF'
-Error: Kubernetes worker node needs this command ,please install 'iptables' first and try again.
+get_distribution() {
+	lsb_dist=""
+	# Every system that we officially support has /etc/os-release
+	if [ -r /etc/os-release ]; then
+		lsb_dist="$(. /etc/os-release && echo "$ID")"
+	fi
+	# Returning an empty string here should be alright since the
+	# case statements don't act unless you provide an actual value
+	echo "$lsb_dist"
+}
+
+user="$(id -un 2>/dev/null || true)"
+sh_c='sh -c'
+if [ "$user" != 'root' ]; then
+    if command_exists sudo; then
+        sh_c='sudo -E sh -c'
+    elif command_exists su; then
+        sh_c='su -c'
+    else
+        cat >&2 <<-'EOF'
+        Error: this installer needs the ability to run commands as root.
+        We are unable to find either "sudo" or "su" available to make this happen.
 EOF
-  exit 1
+        exit 1
+    fi
 fi
 
-if ! command_exists ipvsadm; then
-  cat >&2 <<-'EOF'
-Error: Kubernetes worker node needs this command ,please install 'ipvsadm' first and try again.
-EOF
-  exit 1
-fi
+    lsb_dist=$( get_distribution )
+    lsb_dist="$(echo "$lsb_dist" | tr '[:upper:]' '[:lower:]')"
 
-if ! command_exists ipset; then
-  cat >&2 <<-'EOF'
-Error: Kubernetes worker node needs this command ,please install 'ipset' first and try again.
-EOF
-  exit 1
-fi
+case "$lsb_dist" in
+    ubuntu)
+      pre_reqs="iptables ipvsadm ipset"
+      $sh_c 'apt-get -qq update >/dev/null'
+      $sh_c "DEBIAN_FRONTEND=noninteractive apt-get -y -qq install $pre_reqs >/dev/null"
+    ;;
+    debian|raspbian)
+      pre_reqs="iptables ipvsadm ipset"
+      $sh_c 'apt-get -qq update >/dev/null'
+      $sh_c "DEBIAN_FRONTEND=noninteractive apt-get -y -qq install $pre_reqs >/dev/null"
+    ;;
+    centos|rhel)
+      pre_reqs="iptables ipvsadm ipset"
+      $sh_c "yum -y -q install yum-utils"
+      $sh_c "yum -y -q install $pre_reqs" >/dev/null
+    ;;
+    suse)
+      pre_reqs="iptables ipvsadm ipset"
+      $sh_c "zypper refresh >/dev/null"
+      $sh_c "zypper --non-interactive install $pre_reqs" >/dev/null
+    ;;
+    *)
+        if command_exists lsb_release; then
+            dist_version="$(lsb_release --release | cut -f2)"
+        fi
+        if [ -z "$dist_version" ] && [ -r /etc/os-release ]; then
+            dist_version="$(. /etc/os-release && echo "$VERSION_ID")"
+        fi
+    ;;
+esac
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -38,9 +85,6 @@ while [ $# -gt 0 ]; do
   esac
   shift $(($# > 0 ? 1 : 0))
 done
-
-
-
 
 if command_exists firewalld; then
   echo "-> Close Firewalld."
@@ -60,7 +104,7 @@ if [ -f /etc/selinux/config ]; then
   sed -i "s/^SELINUX=.*/SELINUX=disabled/g" /etc/selinux/config
 fi
 
-echo "-> Setup sysctl."
+info_log "-> Setup sysctl."
 cat >/etc/modules-load.d/99-kubernetes.conf <<EOF
 br_netfilter
 nf_conntrack
@@ -122,10 +166,12 @@ vm.panic_on_oom=0
 vm.swappiness=0
 EOF
 sysctl --system > /dev/null 2>&1
-echo "-> Close swap."
+info_log "-> Close swap."
 swapoff -a
+sed -ri '/^[^#]*swap/s@^@#@' /etc/fstab
 
-echo "-> Install CNI."
+
+info_log "-> Install CNI."
 # Install CNI
 mkdir -p /opt/cni/bin
 if [ $(uname -m) == "x86_64" ];then
@@ -136,16 +182,15 @@ elif [ $(uname -m) == "aarch64" ]; then
   tar -zxf /usr/local/src/cni-plugins-linux-arm64-v1.6.0.tgz --exclude LICENSE --exclude README.md -C /opt/cni/bin
 fi
 
-echo "-> Install Runc."
+info_log "-> Install Runc."
 if [ $(uname -m) == "x86_64" ];then
   wget https://github.com/opencontainers/runc/releases/download/v{{ .Runc }}/runc.amd64 -O /usr/local/bin/runc
 elif [ $(uname -m) == "aarch64" ]; then
   wget https://github.com/opencontainers/runc/releases/download/v{{ .Runc }}/runc.arm64 -O /usr/local/bin/runc
 fi
-
 chmod +x /usr/local/bin/runc
 
-echo "-> Install nerdctl."
+info_log "-> Install nerdctl."
 if [ $(uname -m) == "x86_64" ];then
   wget https://github.com/containerd/nerdctl/releases/download/v1.7.7/nerdctl-1.7.7-linux-amd64.tar.gz -O /usr/local/src/nerdctl-1.7.7-linux-amd64.tar.gz
   tar -zxf /usr/local/src/nerdctl-1.7.7-linux-amd64.tar.gz -C /usr/local/bin nerdctl
@@ -155,7 +200,7 @@ elif [ $(uname -m) == "aarch64" ]; then
 fi
 
 
-echo "-> Install Containerd."
+info_log "-> Install Containerd."
 # Install containerd
 mkdir -p /etc/containerd
 if [ $(uname -m) == "x86_64" ];then
@@ -517,9 +562,16 @@ OOMScoreAdjust=-999
 [Install]
 WantedBy=multi-user.target
 EOF
+systemctl daemon-reload
+systemctl restart containerd.service
+systemctl enable containerd.service
+
 
 # Install kubelet
-echo "-> Install kubelet."
+info_log "-> Install kubelet."
+if [ $(systemctl is-active kubelet.service) == "active" ];then
+  systemctl stop kubelet.service
+fi
 mkdir -p /var/lib/kubelet /etc/kubernetes/pki /etc/kubernetes/manifests
 if [ $(uname -m) == "x86_64" ];then
   wget https://dl.k8s.io/{{ .Kubernetes }}/bin/linux/amd64/kubelet -O /usr/local/bin/kubelet
@@ -703,9 +755,15 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 EOF
+systemctl daemon-reload
+systemctl restart kubelet.service
+systemctl enable kubelet.service
 
 # Install kube-proxy
-echo "-> Install kube-proxy."
+info_log "-> Install kube-proxy."
+if [ $(systemctl is-active kube-proxy.service) == "active" ];then
+  systemctl stop kube-proxy.service
+fi
 if [ $(uname -m) == "x86_64" ];then
   wget https://dl.k8s.io/{{ .Kubernetes }}/bin/linux/amd64/kube-proxy -O /usr/local/bin/kube-proxy
 elif [ $(uname -m) == "aarch64" ]; then
@@ -799,8 +857,8 @@ users:
       client-certificate: /etc/kubernetes/pki/kube-proxy.crt
       client-key: /etc/kubernetes/pki/kube-proxy.key
 EOF
-
 systemctl daemon-reload
-systemctl restart kube-proxy.service kubelet.service  containerd.service
-systemctl enable kube-proxy.service kubelet.service  containerd.service
-echo "-> Start service, please run 'kubectl get no' command on master check the node status."
+systemctl restart kube-proxy.service
+systemctl enable kube-proxy.service
+
+info_log "-> Start service, please run 'kubectl get no' command on master check the node status."

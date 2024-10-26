@@ -17,8 +17,9 @@ func init() {
 	viper.SetDefault("DB_TYPE", "sqlite")
 	viper.SetDefault("PROMETHEUS_URL", "http://prometheus.kok.svc:9090")
 	viper.SetDefault("ELASTICSEARCH_URL", "http://elasticsearch.kok.svc:9200")
-
+	viper.SetDefault("AppMarket_URL", "https://buxiaomo.github.io/appmarket/")
 	viper.AutomaticEnv()
+
 	if _, err := os.Stat("./data"); err != nil {
 		os.Mkdir("./data", 0755)
 	}

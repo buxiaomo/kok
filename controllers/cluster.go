@@ -338,7 +338,7 @@ func plugin(info createInfo, namespace string) {
 			"replicaCount": 1,
 		})
 
-		remoteAppMarket.Chart().Install("kubernetes-dashboard", "kubernetes-dashboard", "kubernetes-dashboard", false, ns.Labels["dashboard"], map[string]interface{}{
+		remoteAppMarket.Chart().Install("kube-system", "kubernetes-dashboard", "kubernetes-dashboard", false, ns.Labels["dashboard"], map[string]interface{}{
 			"kong": map[string]interface{}{
 				"proxy": map[string]interface{}{
 					"type": "NodePort",
