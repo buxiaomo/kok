@@ -20,7 +20,7 @@ get_distribution() {
 	fi
 	# Returning an empty string here should be alright since the
 	# case statements don't act unless you provide an actual value
-	echo "$lsb_dist"
+	echo "$lsb_dist" | tr '[:upper:]' '[:lower:]'
 }
 
 user="$(id -un 2>/dev/null || true)"
@@ -39,9 +39,8 @@ EOF
     fi
 fi
 
-    lsb_dist=$( get_distribution )
-    lsb_dist="$(echo "$lsb_dist" | tr '[:upper:]' '[:lower:]')"
-
+info_log "-> Installing software packages."
+lsb_dist=$(get_distribution)
 case "$lsb_dist" in
     ubuntu)
       pre_reqs="iptables ipvsadm ipset"
@@ -53,12 +52,12 @@ case "$lsb_dist" in
       $sh_c 'apt-get -qq update >/dev/null'
       $sh_c "DEBIAN_FRONTEND=noninteractive apt-get -y -qq install $pre_reqs >/dev/null"
     ;;
-    centos|rhel)
+    centos|rhel|almalinux|rocky|amzn|fedora)
       pre_reqs="iptables ipvsadm ipset"
       $sh_c "yum -y -q install yum-utils"
       $sh_c "yum -y -q install $pre_reqs" >/dev/null
     ;;
-    suse)
+    opensuse-leap|sles)
       pre_reqs="iptables ipvsadm ipset"
       $sh_c "zypper refresh >/dev/null"
       $sh_c "zypper --non-interactive install $pre_reqs" >/dev/null
@@ -102,6 +101,7 @@ fi
 if [ -f /etc/selinux/config ]; then
   echo "-> Close SELinux."
   sed -i "s/^SELINUX=.*/SELINUX=disabled/g" /etc/selinux/config
+  setenforce 0
 fi
 
 info_log "-> Setup sysctl."
