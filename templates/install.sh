@@ -43,18 +43,18 @@ info_log "-> Installing software packages."
 lsb_dist=$(get_distribution)
 case "$lsb_dist" in
     ubuntu)
-      pre_reqs="iptables ipvsadm ipset"
+      pre_reqs="iptables ipvsadm ipset nfs-common"
       $sh_c 'apt-get -qq update >/dev/null'
       $sh_c "DEBIAN_FRONTEND=noninteractive apt-get -y -qq install $pre_reqs >/dev/null"
     ;;
     debian|raspbian)
-      pre_reqs="iptables ipvsadm ipset"
+      pre_reqs="iptables ipvsadm ipset nfs-common"
       $sh_c 'apt-get -qq update >/dev/null'
       $sh_c "DEBIAN_FRONTEND=noninteractive apt-get -y -qq install $pre_reqs >/dev/null"
     ;;
     centos|rhel|almalinux|rocky|amzn|fedora)
-      pre_reqs="iptables ipvsadm ipset"
-      $sh_c "yum -y -q install yum-utils"
+      pre_reqs="iptables ipvsadm ipset nfs-utils"
+      $sh_c "yum -y -q install yum-utils" >/dev/null
       $sh_c "yum -y -q install $pre_reqs" >/dev/null
     ;;
     opensuse-leap|sles)

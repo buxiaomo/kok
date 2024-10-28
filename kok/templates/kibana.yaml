@@ -52,7 +52,7 @@ spec:
             claimName: kibana-vol
       containers:
         - name: kibana
-          image: kibana:7.17.22
+          image: kibana:7.17.25
           ports:
             - name: http
               containerPort: 5601
@@ -70,3 +70,7 @@ spec:
           env:
             - name: ELASTICSEARCH_HOSTS
               value: '["http://elasticsearch:9200"]'
+#            - name: ELASTICSEARCH_USERNAME
+#              value: 'elastic'
+#            - name: ELASTICSEARCH_PASSWORD
+#              value: 'IOgaFSmIsrnqfWmJNCoX'

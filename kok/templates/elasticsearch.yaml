@@ -77,7 +77,7 @@ spec:
             privileged: true
       containers:
         - name: elasticsearch
-          image: elasticsearch:7.17.22
+          image: elasticsearch:7.17.25
           ports:
             - name: http
               containerPort: 9200
@@ -98,3 +98,7 @@ spec:
           env:
             - name: discovery.type
               value: "single-node"
+#            - name: xpack.security.enrollment.enabled
+#              value: "true"
+#            - name: ELASTIC_PASSWORD
+#              value: "IOgaFSmIsrnqfWmJNCoX"
