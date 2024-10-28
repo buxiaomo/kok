@@ -1,6 +1,8 @@
 # kok
 
-This project is deploy kubernetes control-plane on k8s.
+This project is deploy kubernetes control-plane on k8s. 
+
+Can help you create any version of kubernetes control plane in 1 minute..
 
 ## Depend-on
 

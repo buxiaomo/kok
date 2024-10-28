@@ -2297,8 +2297,8 @@ done`, etcdSvc.Name, etcdSvc.Namespace),
 								corev1.ResourceMemory: resource.MustParse("2Gi"),
 							},
 							Requests: &corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("15m"),
-								corev1.ResourceMemory: resource.MustParse("300Mi"),
+								corev1.ResourceCPU:    resource.MustParse("20m"),
+								corev1.ResourceMemory: resource.MustParse("250Mi"),
 							},
 						},
 						Ports: []applycorev1.ContainerPortApplyConfiguration{
@@ -2765,8 +2765,8 @@ done`,
 								corev1.ResourceMemory: resource.MustParse("1Gi"),
 							},
 							Requests: &corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("10m"),
-								corev1.ResourceMemory: resource.MustParse("100Mi"),
+								corev1.ResourceCPU:    resource.MustParse("15m"),
+								corev1.ResourceMemory: resource.MustParse("150Mi"),
 							},
 						},
 						Ports: []applycorev1.ContainerPortApplyConfiguration{
