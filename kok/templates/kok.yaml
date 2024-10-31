@@ -147,24 +147,26 @@ spec:
               containerPort: 8080
               protocol: TCP
           livenessProbe:
-            initialDelaySeconds: 60
+            initialDelaySeconds: 15
             periodSeconds: 5
             timeoutSeconds: 5
-            tcpSocket:
+            httpGet:
               port: 8080
+              path: /healthz
           readinessProbe:
-            initialDelaySeconds: 5
+            initialDelaySeconds: 15
             periodSeconds: 5
             timeoutSeconds: 5
-            tcpSocket:
+            httpGet:
               port: 8080
-#          resources:
-#            limits:
-#              cpu: "2"
-#              memory: "1Gi"
-#            requests:
-#              cpu: "60m"
-#              memory: "850Mi"
+              path: /healthz
+          resources:
+            limits:
+              cpu: "1"
+              memory: "500Mi"
+            requests:
+              cpu: "5m"
+              memory: "50Mi"
           env:
             - name: TZ
               value: "Asia/Shanghai"
@@ -178,3 +180,5 @@ spec:
               value: "{{ .Values.database.url }}"
             - name: DB_TYPE
               value: "{{ .Values.database.type }}"
+            - name: ISTIO_INJECTION
+              value: "{{ .Values.istio.injection }}"

@@ -14,13 +14,15 @@ import (
 
 var db *gorm.DB
 
-func ConnectDB(t, url string) {
+func ConnectDB(dbType, dsn string) {
 	var (
 		database *gorm.DB
 		err      error
 	)
 	cfg := &gorm.Config{
-		PrepareStmt: true,
+		NamingStrategy: schema.NamingStrategy{
+			SingularTable: true, // 使用单数表名
+		},
 		Logger: logger.New(
 			log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
 			logger.Config{
@@ -29,21 +31,18 @@ func ConnectDB(t, url string) {
 				Colorful:      true,        // 禁用彩色打印
 			},
 		),
-		NamingStrategy: schema.NamingStrategy{
-			SingularTable: true, // 使用单数表名
-		},
 		NowFunc: func() time.Time {
 			return time.Now().Local()
 		},
 	}
 
-	switch t {
+	switch dbType {
 	case "mysql":
-		database, err = gorm.Open(mysql.Open(url), cfg)
+		database, err = gorm.Open(mysql.Open(dsn), cfg)
 	case "postgres":
-		database, err = gorm.Open(postgres.Open(url), cfg)
+		database, err = gorm.Open(postgres.Open(dsn), cfg)
 	case "sqlite":
-		database, err = gorm.Open(sqlite.Open(url), cfg)
+		database, err = gorm.Open(sqlite.Open(dsn), cfg)
 	default:
 		log.Fatal("db not support!")
 	}

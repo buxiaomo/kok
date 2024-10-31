@@ -52,7 +52,7 @@ spec:
             claimName: kibana-vol
       containers:
         - name: kibana
-          image: kibana:7.17.25
+          image: kibana:7.17.22
           ports:
             - name: http
               containerPort: 5601

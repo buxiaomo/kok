@@ -129,7 +129,7 @@ metadata:
     app.kubernetes.io/name: fluentd
 spec:
   image: ghcr.io/fluent/fluent-operator/fluentd:v1.17.0
-  replicas: 3
+  replicas: 1
   fluentdCfgSelector:
     matchLabels:
       config.fluentd.fluent.io/enabled: "true"

@@ -877,6 +877,7 @@ func ClusterCreate(c *gin.Context) {
 			"metrics-server":     vinfo.MetricsServer,
 			"kube-state-metrics": vinfo.KubeStateMetrics,
 			"dashboard":          vinfo.Dashboard,
+			"istio-injection":    viper.GetString("ISTIO_INJECTION"),
 		},
 	})
 	if err != nil {

@@ -15,6 +15,7 @@ func init() {
 	viper.SetDefault("JWT_TOKEN", "secret")
 	viper.SetDefault("DB_URL", "./data/kok.sqlite")
 	viper.SetDefault("DB_TYPE", "sqlite")
+	viper.SetDefault("ISTIO_INJECTION", "enabled") // enabled or disable
 	viper.SetDefault("PROMETHEUS_URL", "http://prometheus.kok.svc:9090")
 	viper.SetDefault("ELASTICSEARCH_URL", "http://elasticsearch.kok.svc:9200")
 	viper.SetDefault("AppMarket_URL", "https://buxiaomo.github.io/appmarket/")
@@ -36,7 +37,6 @@ func init() {
 	//go kc.ClearPodOnFaultyNode()
 
 	models.ConnectDB(viper.GetString("DB_TYPE"), viper.GetString("DB_URL"))
-
 }
 
 func main() {

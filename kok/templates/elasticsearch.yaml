@@ -77,7 +77,7 @@ spec:
             privileged: true
       containers:
         - name: elasticsearch
-          image: elasticsearch:7.17.25
+          image: elasticsearch:7.17.22
           ports:
             - name: http
               containerPort: 9200

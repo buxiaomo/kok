@@ -2,11 +2,22 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 hub: "buxiaomo/kok"
-tag: "1.1.14"
+tag: "1.1.15"
+
+istio:
+  injection: "enable"
 
 database:
+# sqlite config
   type: "sqlite"
   url: "/app/data/kok.sqlite"
+# mysql config
+#  type: "mysql"
+#  url: "root:root@tcp(mysql:3306)/kok?charset=utf8mb4&parseTime=True&loc=Local"
+
+# mysql postgres
+#  type: "postgres"
+#  url: "host=postgresql user=kok password=kok dbname=kok port=5432 sslmode=disable TimeZone=Asia/Shanghai"
 
 prometheus:
   url: "http://127.0.0.1:9090"

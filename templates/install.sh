@@ -23,6 +23,22 @@ get_distribution() {
 	echo "$lsb_dist" | tr '[:upper:]' '[:lower:]'
 }
 
+cni(){
+  info_log "-> Install CNI."
+  version=$1
+  mkdir -p /opt/cni/bin
+  url="https://github.com/containernetworking/plugins/releases/download/${version}/cni-plugins-linux-amd64-${version}.tgz"
+  if [ "$(uname -m)" == "x86_64" ];then
+    url="https://github.com/containernetworking/plugins/releases/download/${version}/cni-plugins-linux-amd64-${version}.tgz"
+  elif [ "$(uname -m)" == "aarch64" ]; then
+    url="https://github.com/containernetworking/plugins/releases/download/${version}/cni-plugins-linux-arm64-${version}.tgz"
+  fi
+  curl -fsSL "${url}" -o /usr/local/src/cni-plugins-linux-${version}.tgz
+#  wget "${url}" -O ""
+  tar -zxf "/usr/local/src/cni-plugins-linux-${version}.tgz" --exclude LICENSE --exclude README.md -C /opt/cni/bin
+  rm -rf "/usr/local/src/cni-plugins-linux-${version}.tgz"
+}
+
 user="$(id -un 2>/dev/null || true)"
 sh_c='sh -c'
 if [ "$user" != 'root' ]; then
@@ -76,6 +92,10 @@ while [ $# -gt 0 ]; do
   case "$1" in
   --name)
     export NAME="$2"
+    shift
+    ;;
+  --cri)
+    export CRI="$2"
     shift
     ;;
   --*)
@@ -171,16 +191,7 @@ swapoff -a
 sed -ri '/^[^#]*swap/s@^@#@' /etc/fstab
 
 
-info_log "-> Install CNI."
-# Install CNI
-mkdir -p /opt/cni/bin
-if [ $(uname -m) == "x86_64" ];then
-  wget https://github.com/containernetworking/plugins/releases/download/v1.6.0/cni-plugins-linux-amd64-v1.6.0.tgz -O /usr/local/src/cni-plugins-linux-amd64-v1.6.0.tgz
-  tar -zxf /usr/local/src/cni-plugins-linux-amd64-v1.6.0.tgz --exclude LICENSE --exclude README.md -C /opt/cni/bin
-elif [ $(uname -m) == "aarch64" ]; then
-  wget https://github.com/containernetworking/plugins/releases/download/v1.6.0/cni-plugins-linux-arm64-v1.6.0.tgz -O /usr/local/src/cni-plugins-linux-arm64-v1.6.0.tgz
-  tar -zxf /usr/local/src/cni-plugins-linux-arm64-v1.6.0.tgz --exclude LICENSE --exclude README.md -C /opt/cni/bin
-fi
+cni "v1.6.0"
 
 info_log "-> Install Runc."
 if [ $(uname -m) == "x86_64" ];then
