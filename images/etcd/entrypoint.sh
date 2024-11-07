@@ -1,5 +1,5 @@
 #!/bin/sh
-set -x
+set -xe
 export HOSTNAME=$(hostname)
 export ID=${HOSTNAME##*[^0-9]}
 export ETCD_CERT="--cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/healthcheck-client.crt --key /etc/kubernetes/pki/etcd/healthcheck-client.key"
@@ -25,27 +25,35 @@ export ETCD_ARGS="--data-dir=/var/lib/etcd \
 --cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_256_GCM_SHA384"
 export ETCDCTL_API=3
 
-if [ ${ID} -eq 0 ]; then
-  exec /usr/local/bin/etcd \
-  --name=${HOSTNAME} \
-  --initial-cluster=${HOSTNAME}=https://${HOSTNAME}.etcd.${NAMESPACE}:2380 \
-  --initial-cluster-state=new \
-  --initial-advertise-peer-urls=https://${HOSTNAME}.etcd.${NAMESPACE}:2380 ${ETCD_ARGS}
-else
-  if [ -f /var/lib/cache/envs ];then
-    source /var/lib/cache/envs
-    exec /usr/local/bin/etcd \
-      --name=${ETCD_NAME} \
-      --initial-cluster=${ETCD_INITIAL_CLUSTER} \
-      --initial-cluster-state=${ETCD_INITIAL_CLUSTER_STATE} \
-      --initial-advertise-peer-urls=${ETCD_INITIAL_ADVERTISE_PEER_URLS} ${ETCD_ARGS}
-  fi
-
-  etcdctl --endpoints https://etcd-0.etcd.${NAMESPACE}:2379 ${ETCD_CERT} member add ${HOSTNAME} --peer-urls=https://${HOSTNAME}.etcd.${NAMESPACE}:2380 | grep "^ETCD_" > /var/lib/cache/envs
-  source /var/lib/cache/envs
-  exec /usr/local/bin/etcd \
-    --name=${ETCD_NAME} \
-    --initial-cluster=${ETCD_INITIAL_CLUSTER} \
-    --initial-cluster-state=${ETCD_INITIAL_CLUSTER_STATE} \
-    --initial-advertise-peer-urls=${ETCD_INITIAL_ADVERTISE_PEER_URLS} ${ETCD_ARGS}
+if [ -f /var/lib/cache/entrypoint.sh ];then
+  chmod +x /var/lib/cache/entrypoint.sh
+  /var/lib/cache/entrypoint.sh
 fi
+
+if [ ${ID} -eq 0 ]; then
+  cat >/var/lib/cache/entrypoint.sh <<EOF
+#!/bin/sh
+exec /usr/local/bin/etcd \\
+--name=${HOSTNAME} \\
+--initial-cluster=${HOSTNAME}=https://${HOSTNAME}.etcd.${NAMESPACE}:2380 \\
+--initial-cluster-state=new \\
+--initial-advertise-peer-urls=https://${HOSTNAME}.etcd.${NAMESPACE}:2380 ${ETCD_ARGS}
+EOF
+  chmod +x /var/lib/cache/entrypoint.sh
+  /var/lib/cache/entrypoint.sh
+fi
+
+etcdctl --endpoints https://etcd-0.etcd.${NAMESPACE}:2379 ${ETCD_CERT} member add ${HOSTNAME} --peer-urls=https://${HOSTNAME}.etcd.${NAMESPACE}:2380 | grep "^ETCD_" > /var/lib/cache/envs
+
+cat >/var/lib/cache/entrypoint.sh <<EOF
+#!/bin/sh
+source /var/lib/cache/envs
+exec /usr/local/bin/etcd \\
+--name=\${ETCD_NAME} \\
+--initial-cluster=\${ETCD_INITIAL_CLUSTER} \\
+--initial-cluster-state=\${ETCD_INITIAL_CLUSTER_STATE} \\
+--initial-advertise-peer-urls=\${ETCD_INITIAL_ADVERTISE_PEER_URLS} \\
+${ETCD_ARGS}
+EOF
+chmod +x /var/lib/cache/entrypoint.sh
+/var/lib/cache/entrypoint.sh

@@ -810,7 +810,7 @@ func ClusterPages(c *gin.Context) {
 			"Name":         ns.Name,
 			"Version":      ns.Labels["kubernetes"],
 			"Status":       ns.Status.Phase,
-			"Network":      ns.Labels["network"],
+			"Network":      fmt.Sprintf("%s v%s", ns.Labels["network"], ns.Labels["networkVersion"]),
 			"LoadBalancer": ns.Labels["loadBalancer"],
 			"Components":   components,
 		})
@@ -1812,17 +1812,17 @@ func ClusterCreate(c *gin.Context) {
 						//		return &a
 						//	}(),
 						//},
-						Lifecycle: &applycorev1.LifecycleApplyConfiguration{
-							PreStop: &applycorev1.LifecycleHandlerApplyConfiguration{
-								Exec: &applycorev1.ExecActionApplyConfiguration{
-									Command: []string{
-										"/bin/sh",
-										"-cx",
-										"/usr/local/bin/prestop.sh",
-									},
-								},
-							},
-						},
+						//Lifecycle: &applycorev1.LifecycleApplyConfiguration{
+						//	PreStop: &applycorev1.LifecycleHandlerApplyConfiguration{
+						//		Exec: &applycorev1.ExecActionApplyConfiguration{
+						//			Command: []string{
+						//				"/bin/sh",
+						//				"-cx",
+						//				"/usr/local/bin/prestop.sh",
+						//			},
+						//		},
+						//	},
+						//},
 						Command: []string{
 							"/bin/sh",
 							"-ecx",

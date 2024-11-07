@@ -9,21 +9,23 @@ COPY . /go/src/app/
 RUN CGO_ENABLED=1 GO111MODULE=on GOOS=linux go build -o main main.go
 
 FROM alpine:3.20.3
-RUN apk add --no-cache curl bash sqlite bash-completion \
+RUN apk add --no-cache curl bash sqlite bash-completion git \
     && adduser -D -h /app -u 1000 app
 WORKDIR /app
+ARG KUBE_VERSION=v1.31.1
 RUN if [ `uname -m` = "x86_64" ]; then \
-        wget -q https://dl.k8s.io/v1.31.1/bin/linux/amd64/kubectl -O /usr/local/bin/kubectl;  \
+        wget -q https://dl.k8s.io/${KUBE_VERSION}/bin/linux/amd64/kubectl -O /usr/local/bin/kubectl;  \
     else \
-        wget -q https://dl.k8s.io/v1.31.1/bin/linux/arm64/kubectl -O /usr/local/bin/kubectl; \
+        wget -q https://dl.k8s.io/${KUBE_VERSION}/bin/linux/arm64/kubectl -O /usr/local/bin/kubectl; \
     fi \
     && echo 'source <(kubectl completion bash)' > /etc/profile.d/kubelet.sh \
     && chmod +x /usr/local/bin/kubectl
 
+ARG KUBECM_VERSION=v0.31.0
 RUN if [ `uname -m` = "x86_64" ]; then \
-        wget https://github.com/sunny0826/kubecm/releases/download/v0.31.0/kubecm_v0.31.0_Linux_x86_64.tar.gz -O /tmp/kubecm.tar.gz;  \
+        wget https://github.com/sunny0826/kubecm/releases/download/${KUBECM_VERSION}/kubecm_${KUBECM_VERSION}_Linux_x86_64.tar.gz -O /tmp/kubecm.tar.gz;  \
     else \
-        wget https://github.com/sunny0826/kubecm/releases/download/v0.31.0/kubecm_v0.31.0_Linux_arm64.tar.gz -O /tmp/kubecm.tar.gz;  \
+        wget https://github.com/sunny0826/kubecm/releases/download/${KUBECM_VERSION}/kubecm_${KUBECM_VERSION}_Linux_arm64.tar.gz -O /tmp/kubecm.tar.gz;  \
     fi \
     && tar -zvxf /tmp/kubecm.tar.gz -C /usr/local/bin/ kubecm \
     && echo 'source <(kubecm completion bash)' > /etc/profile.d/kubecm.sh \
@@ -32,7 +34,7 @@ RUN if [ `uname -m` = "x86_64" ]; then \
 
 COPY --from=builder --chown=1000 /go/src/app/main ./main
 COPY --from=builder --chown=1000 /go/src/app/templates ./templates
-COPY --from=builder --chown=1000 /go/src/app/appmarket ./appmarket
+#COPY --from=builder --chown=1000 /go/src/app/appmarket ./appmarket
 COPY --from=builder --chown=1000 /go/src/app/static ./static
 COPY --from=builder --chown=1000 /usr/local/bin/helm /usr/local/bin/helm
 COPY entrypoint.sh /entrypoint.sh
