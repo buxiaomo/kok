@@ -26,4 +26,4 @@ jobs:
 
       - name: Build images
         run: |
-          docker buildx build --platform=amd64 -t ghcr.io/buxiaomo/kok:${GITHUB_SHA::6} --push .
+          docker buildx build --platform=amd64,arm64 -t ghcr.io/buxiaomo/kok:${GITHUB_SHA::6} --push .
