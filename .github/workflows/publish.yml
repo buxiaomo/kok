@@ -26,4 +26,5 @@ jobs:
 
       - name: Build images
         run: |
+          docker run --privileged --rm tonistiigi/binfmt --install all
           docker buildx build --platform=amd64,arm64 -t ghcr.io/buxiaomo/kok:${GITHUB_SHA::6} --push .
