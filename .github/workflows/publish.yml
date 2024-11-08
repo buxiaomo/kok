@@ -4,6 +4,8 @@ on:
   push:
 
 permissions:
+  packages: write
+  attestations: write
   contents: read
   pages: write
   id-token: write
@@ -23,6 +25,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
+        with:
+          registry: "ghcr.io"
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
 
       - name: Build images
         run: |
