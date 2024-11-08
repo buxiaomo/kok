@@ -76,11 +76,11 @@ func ConnectDB(dbType, dsn string) {
 			{Kubernetes: "v1.24.17", Etcd: "3.5.3-0", Containerd: "1.7.6", Runc: "1.1.9", Pause: "3.6", Coredns: "1.8.6", MetricsServer: "0.6.4", KubeStateMetrics: "2.6.0", Dashboard: "7.8.0"},
 			{Kubernetes: "v1.25.16", Etcd: "3.5.4-0", Containerd: "1.7.13", Runc: "1.1.12", Pause: "3.8", Coredns: "1.9.3", MetricsServer: "0.6.4", KubeStateMetrics: "2.7.0", Dashboard: "7.8.0"},
 			{Kubernetes: "v1.26.15", Etcd: "3.5.6-0", Containerd: "1.7.18", Runc: "1.1.12", Pause: "3.9", Coredns: "1.9.3", MetricsServer: "0.7.2", KubeStateMetrics: "2.9.2", Dashboard: "7.8.0"},
-			{Kubernetes: "v1.27.16", Etcd: "3.5.7-0", Containerd: "1.7.23", Runc: "1.1.14", Pause: "3.9", Coredns: "1.10.1", MetricsServer: "0.7.2", KubeStateMetrics: "2.10.1", Dashboard: "7.8.0"},
-			{Kubernetes: "v1.28.15", Etcd: "3.5.9-0", Containerd: "1.7.23", Runc: "1.1.14", Pause: "3.9", Coredns: "1.10.1", MetricsServer: "0.7.2", KubeStateMetrics: "2.11.0", Dashboard: "7.8.0"},
-			{Kubernetes: "v1.29.10", Etcd: "3.5.12-0", Containerd: "1.7.23", Runc: "1.1.14", Pause: "3.9", Coredns: "1.11.1", MetricsServer: "0.7.2", KubeStateMetrics: "2.12.0", Dashboard: "7.8.0"},
-			{Kubernetes: "v1.30.6", Etcd: "3.5.12-0", Containerd: "1.7.23", Runc: "1.1.14", Pause: "3.9", Coredns: "1.11.1", MetricsServer: "0.7.2", KubeStateMetrics: "2.13.0", Dashboard: "7.8.0"},
-			{Kubernetes: "v1.31.2", Etcd: "3.5.15-0", Containerd: "1.7.23", Runc: "1.1.14", Pause: "3.10", Coredns: "1.11.1", MetricsServer: "0.7.2", KubeStateMetrics: "2.13.0", Dashboard: "7.8.0"},
+			{Kubernetes: "v1.27.16", Etcd: "3.5.7-0", Containerd: "2.0.0", Runc: "1.2.1", Pause: "3.9", Coredns: "1.10.1", MetricsServer: "0.7.2", KubeStateMetrics: "2.10.1", Dashboard: "7.8.0"},
+			{Kubernetes: "v1.28.15", Etcd: "3.5.9-0", Containerd: "2.0.0", Runc: "1.2.1", Pause: "3.9", Coredns: "1.10.1", MetricsServer: "0.7.2", KubeStateMetrics: "2.11.0", Dashboard: "7.8.0"},
+			{Kubernetes: "v1.29.10", Etcd: "3.5.12-0", Containerd: "2.0.0", Runc: "1.2.1", Pause: "3.9", Coredns: "1.11.1", MetricsServer: "0.7.2", KubeStateMetrics: "2.12.0", Dashboard: "7.8.0"},
+			{Kubernetes: "v1.30.6", Etcd: "3.5.12-0", Containerd: "2.0.0", Runc: "1.2.1", Pause: "3.9", Coredns: "1.11.1", MetricsServer: "0.7.2", KubeStateMetrics: "2.13.0", Dashboard: "7.8.0"},
+			{Kubernetes: "v1.31.2", Etcd: "3.5.15-0", Containerd: "2.0.0", Runc: "1.2.1", Pause: "3.10", Coredns: "1.11.1", MetricsServer: "0.7.2", KubeStateMetrics: "2.13.0", Dashboard: "7.8.0"},
 		}
 		db.Create(versions)
 	}
