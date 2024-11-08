@@ -1,6 +1,6 @@
 FROM golang:1.23.1-alpine3.20 AS builder
 ENV GOPROXY "https://goproxy.cn,direct"
-RUN apk add --no-cache g++ git curl bash openssl \
+RUN apk add --no-cache g++ git curl bash openssl binutils-gold \
     && curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 WORKDIR /go/src/app
 COPY go.mod go.sum /go/src/app/
