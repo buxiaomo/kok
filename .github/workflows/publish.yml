@@ -26,15 +26,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
-        with:
-          registry: "ghcr.io"
-          username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PASSWORD }}
-
       - name: Build images
         run: |
+          echo ${{ secrets.PASSWORD }} | docker login ghcr.io --username ${{ secrets.USERNAME }} --password-stdin >/dev/null
           docker run --privileged --rm tonistiigi/binfmt --install all
           docker buildx create --use --bootstrap --name multi-platform --driver docker-container
           docker buildx build --platform=amd64,arm64 -t ghcr.io/buxiaomo/kok:${GITHUB_SHA::6} --push .
