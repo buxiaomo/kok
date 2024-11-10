@@ -29,7 +29,7 @@ func getIpSeg3Range(ipSegs []string, maskLen int) (int, int) {
 	return getIpSegRange(uint8(ipSeg), uint8(24-maskLen))
 }
 
-func GetCidrIpRange(cidr string) (string, string) {
+func GetCidrIpRange(cidr string) (minIP string, maxIP string) {
 	ip := strings.Split(cidr, "/")[0]
 	ipSegs := strings.Split(ip, ".")
 	maskLen, _ := strconv.Atoi(strings.Split(cidr, "/")[1])
@@ -41,7 +41,7 @@ func GetCidrIpRange(cidr string) (string, string) {
 		ipPrefix + strconv.Itoa(seg3MaxIp) + "." + strconv.Itoa(seg4MaxIp)
 }
 
-func Increment(addrString string) *ipaddr.IPAddress {
+func Increment(addrString string, n int64) *ipaddr.IPAddress {
 	addr := ipaddr.NewIPAddressString(addrString).GetAddress()
-	return addr.Increment(1)
+	return addr.Increment(n)
 }

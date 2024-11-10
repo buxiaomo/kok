@@ -19,7 +19,7 @@ func SetupRouter() *gin.Engine {
 	r.Use(gin.Recovery())
 	r.LoadHTMLGlob("templates/*")
 	r.Static("/static", "./static")
-
+	r.GET("/healthz", controllers.Healthz)
 	// 设置日志格式
 	r.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
 		return fmt.Sprintf(`{"time":"%s","dest_ip":"%s","http_method":"%s","uri_path":"%s","proto":"%s","status":%d,"response_time":"%s","http_user_agent":"%s","bytes_in":%d,"errmsg":"%s"}%v`,
@@ -37,7 +37,6 @@ func SetupRouter() *gin.Engine {
 		)
 	}))
 
-	r.GET("/healthz", controllers.Healthz)
 	r.GET("/login", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "login.html", gin.H{})
 	})
@@ -69,8 +68,10 @@ func SetupRouter() *gin.Engine {
 		private.GET("/version", controllers.VersionPages)
 		private.DELETE("/version", controllers.DeleteVersion)
 		private.POST("/version", controllers.CreateVersion)
+		private.GET("/cluster/version", controllers.GetVersion)
 		private.GET("/cluster/kubeconfig", controllers.Kubeconfig)
 		private.GET("/cluster/status", controllers.ClusterStatus)
+		private.POST("/cluster/upgrade", controllers.ClusterUpgrade)
 		private.PUT("/cluster/monitor", controllers.ClusterMonitor)
 		private.PUT("/cluster/log", controllers.ClusterLog)
 		private.POST("/cluster", controllers.ClusterCreate)

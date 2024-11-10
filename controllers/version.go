@@ -6,6 +6,15 @@ import (
 	"net/http"
 )
 
+func GetVersion(c *gin.Context) {
+	var version db.Version
+	versions, _ := version.SelectAll()
+
+	c.JSON(http.StatusOK, gin.H{
+		"version": versions,
+	})
+}
+
 func VersionPages(c *gin.Context) {
 	var version db.Version
 	versions, _ := version.SelectAll()

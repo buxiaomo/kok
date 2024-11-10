@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/spf13/viper"
 	"kok/pkg/control"
-	"kok/pkg/utils"
 	"net/http"
 	"strings"
 	"text/template"
@@ -41,9 +40,6 @@ func NodeInit(c *gin.Context) {
 		return
 	}
 
-	serviceSubnet := strings.Replace(ns.Labels["serviceSubnet"], "-", "/", 1)
-	minIp, _ := utils.GetCidrIpRange(serviceSubnet)
-
 	tmpl, err := template.ParseFiles("./templates/install.sh")
 	if err != nil {
 		fmt.Println("create template failed, err:", err)
@@ -58,9 +54,9 @@ func NodeInit(c *gin.Context) {
 		Registry:      ns.Labels["registry"],
 		Kubernetes:    ns.Labels["kubernetes"],
 		LoadBalancer:  ns.Labels["loadBalancer"],
-		ClusterDNS:    utils.Increment(minIp).String(),
+		ClusterDNS:    ns.Labels["clusterDNS"],
 		Pause:         ns.Labels["pause"],
-		ServiceSubnet: serviceSubnet,
+		ServiceSubnet: strings.Replace(ns.Labels["serviceSubnet"], "-", "/", 1),
 		Project:       ns.Labels["project"],
 		Env:           ns.Labels["env"],
 		Pkiurl:        viper.GetString("PKI_URL"),

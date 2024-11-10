@@ -14,11 +14,13 @@ rules:
     resources:
       - deployments
       - statefulsets
+      - replicasets
     verbs:
       - get
       - delete
       - create
       - patch
+      - list
   - apiGroups:
       - ""
     resources:

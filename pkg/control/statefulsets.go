@@ -22,6 +22,10 @@ type statefulsets struct {
 	ctx       context.Context
 }
 
+func (t statefulsets) Get(namespace, name string) (*v1.StatefulSet, error) {
+	return t.clientset.AppsV1().StatefulSets(namespace).Get(t.ctx, name, metav1.GetOptions{})
+}
+
 func (t statefulsets) Patch(namespace, name string, data []byte) (result *v1.StatefulSet, err error) {
 	return t.clientset.AppsV1().StatefulSets(namespace).Patch(context.TODO(), name, types.MergePatchType, data, metav1.PatchOptions{})
 }

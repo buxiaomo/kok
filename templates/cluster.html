@@ -350,7 +350,11 @@
                                             <td>{{ .Name }}</td>
                                             <td>{{ .Version }}</td>
                                             <th>{{ .LoadBalancer }}</th>
-                                            <td>{{ .Network }}</td>
+                                            {{ if eq .Network "none" }}
+                                            <td>None</td>
+                                            {{ else }}
+                                            <td>{{ .Network }} v{{ .NetworkVersion }}</td>
+                                            {{end}}
                                             <td>
                                                 {{ if eq .Status "Active" }}
                                                     kube-apiserver: <span class="label label-success">{{ .Components.Apiserver }}</span><br/>
@@ -362,8 +366,8 @@
                                             </td>
                                             <td>
                                                 <div class="btn-group">
-
                                                     <a class="btn btn-xs btn-default" onclick="Status({{.Name}});" title="组件状态" data-toggle="tooltip"><i class="mdi mdi-information"></i></a>
+                                                    <a class="btn btn-xs btn-default" onclick="GetVersion({{.Name}},{{ .Version }},{{ .Network }});" title="集群升级" data-toggle="modal" data-target="#upgradeModal" data-whatever="@mdo"><i class="mdi mdi-arrow-up-bold-circle-outline"></i></a>
                                                     <a class="btn btn-xs btn-default" onclick="Join({{.Name}});" title="添加节点" data-toggle="tooltip"><i class="mdi mdi-console"></i></a>
                                                     <a class="btn btn-xs btn-default" onclick="ClusterHA({{.Name}},{{.Name}});" title="启用高可用" data-toggle="tooltip"><i class="mdi mdi-hexagon-multiple"></i></a>
                                                     <a class="btn btn-xs btn-default" onclick="EnableMonitor({{.Name}});" title="启用监控" data-toggle="tooltip"><i class="mdi mdi-monitor"></i></a>
@@ -376,6 +380,55 @@
                                     </table>
                                 </div>
                             </div>
+
+                            <div class="modal fade" id="upgradeModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title" id="exampleModalLabel">集群升级</h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form>
+                                                <div class="form-group">
+                                                    <label for="UpgradeKubernetesName" class="control-label">集群名字：</label>
+                                                    <input class="form-control UpgradeKubernetesName" type="text" id="UpgradeKubernetesName" name="example-hf-password" value="" disabled>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="UpgradeKubernetesVersion" class="control-label">Kubernetes：</label>
+                                                    <select class="form-control UpgradeKubernetesVersion" id="UpgradeKubernetesVersion" name="example-select" size="1" onchange="getUpgradeNetworkVersion()">
+                                                    </select>
+                                                </div>
+
+                                                <div class="form-group">
+                                                    <label for="upgradeNetwork" class="control-label">网络插件：</label>
+                                                    <input class="form-control upgradeNetwork" type="text" id="upgradeNetwork" name="example-hf-password" value="" disabled>
+                                                </div>
+<!--                                                <div class="form-group">-->
+<!--                                                    <label for="UpgradeContainerdVersion" class="control-label">Containerd：</label>-->
+<!--                                                    <select class="form-control UpgradeContainerdVersion" id="UpgradeContainerdVersion" name="example-select" size="1">-->
+<!--                                                    </select>-->
+<!--                                                </div>-->
+
+                                                <div class="form-group">
+                                                    <label for="UpgradeNetworkVersion" class="control-label">版本：</label>
+                                                    <select class="form-control UpgradeNetworkVersion" id="UpgradeNetworkVersion" name="example-select" size="1">
+                                                        <option value="none">请选择</option>
+                                                    </select>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                                            <button type="button" class="btn btn-primary" onclick="UpgradeCluster();">升级</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+
+
+
                         </div>
                     </div>
 
@@ -399,6 +452,109 @@
 <script type="text/javascript" src="/static/js/lightyear.js"></script>
 
 <script type="text/javascript">
+    function UpgradeCluster(){
+        data = JSON.stringify({
+            "kubernetes": $('.UpgradeKubernetesVersion').val(),
+            "network": $('.upgradeNetwork').val(),
+            "networkVersion": $('.UpgradeNetworkVersion').val(),
+        })
+
+        $.ajax({
+            type: 'POST',
+            url: '/console/cluster/upgrade?name='+$('.UpgradeKubernetesName').val(),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            data: data,
+            success: function(r) {
+                lightyear.loading('show');
+                setTimeout(function() {
+                    lightyear.loading('hide');
+                    lightyear.notify('成功，页面即将自动跳转~', 'success', 100000);
+                    window.location.reload();
+                }, 1e3)
+            },
+        });
+    }
+
+    function compareVersion(version1, version2) {
+        var v1 = version1.replace('v','')
+        var v2 = version2.replace('v','')
+        let pA = 0, pB = 0;
+        /** 寻找当前区间的版本号 */
+        const findDigit = (str, start) => {
+            let i = start;
+            while (str[i] !== '.' && i < str.length) {
+                i++;
+            }
+            return i;
+        }
+
+        while (pA < v1.length && pB < v2.length) {
+            const nextA = findDigit(v1, pA);
+            const nextB = findDigit(v2, pB);
+            const numA = +v1.substr(pA, nextA - pA);
+            const numB = +v2.substr(pB, nextB - pB);
+            if (numA !== numB) {
+                return numA > numB ? 1 : -1;
+            }
+            pA = nextA + 1;
+            pB = nextB + 1;
+        }
+        // 若arrayA仍有小版本号
+        while (pA < v1.length) {
+            const nextA = findDigit(v1, pA);
+            const numA = +v1.substr(pA, nextA - pA);
+            if (numA > 0) {
+                return 1;
+            }
+            pA = nextA + 1;
+        }
+        // 若arrayB仍有小版本号
+        while (pB < v2.length) {
+            const nextB = findDigit(v2, pB);
+            const numB = +v2.substr(pB, nextB - pB);
+            if (numB > 0) {
+                return -1;
+            }
+            pB = nextB + 1;
+        }
+        // 版本号完全相同
+        return 0;
+    }
+
+    function GetVersion(name, version,network){
+        $.ajax({
+            type: 'GET',
+            url: '/console/cluster/version',
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function(r) {
+                $("#UpgradeKubernetesVersion").empty();
+                $("#UpgradeContainerdVersion").empty();
+                $("#UpgradeKubernetesName").attr("value",name);
+                $("#upgradeNetwork").attr("value", network);
+                for (var i = 0; i < r.version.length; i++){
+                    // console.log(compareVersion(version, r.version[i].Kubernetes))
+                    if (compareVersion(version, r.version[i].Kubernetes) === -1 || compareVersion(version, r.version[i].Kubernetes) === 0){
+                        // console.log()
+                        $('#UpgradeKubernetesVersion').append($('<option>', {
+                            value: r.version[i].Kubernetes,
+                            text: r.version[i].Kubernetes
+                        }));
+                        var res = $('#UpgradeContainerdVersion').find("option[value='"+r.version[i].Containerd+"']");
+                        if (res.length > 0) {
+                        }else{
+                            $('#UpgradeContainerdVersion').append($('<option>', {
+                                value: r.version[i].Containerd,
+                                text: r.version[i].Containerd
+                            }));
+                        }
+                    }
+                }
+            },
+        });
+    }
+
     function Status(name){
         $.ajax({
             type: 'GET',
@@ -406,28 +562,29 @@
             contentType: "application/json; charset=utf-8",
             dataType: "json",
             success: function(r) {
-                // console.log(r);
-                // var network
-                // var sts
-                // console.log(typeof r.flannel);
-                // if( typeof r.flannel === 'string'){
-                //     network === "flannel"
-                //     sts === r.flannel
-                // } else if(! typeof r.calico === 'string'){
-                //     network === "calico"
-                //     sts === r.calico
-                // }else if(! typeof r.canal === 'string'){
-                //     network === "canal"
-                //     sts === r.canal
-                // }else {
-                //     network === "antrea"
-                //     sts === r.antrea
-                // }
+                var node = ""
+                for (var i = 0; i < r.node.length; i++){
+                    node = node+"<br>"  + r.node[i].metadata.name + ' ' +
+                        r.node[i].status.addresses[0].address + ' ' +
+                        r.node[i].status.nodeInfo.kubeletVersion + ' ' +
+                        r.node[i].status.nodeInfo.osImage + ' ' +
+                        r.node[i].status.nodeInfo.kernelVersion + ' ' +
+                        r.node[i].status.nodeInfo.containerRuntimeVersion
+                }
                 $.confirm({
                     title: '集群信息('+name+')',
-                    content: "coredns: " + r.coredns + "<br>" +
-                    "metrics-server: " + r.metricsServer + "<br>" + r.network.name+": "+ r.network.status,
-                    // type: 'green',
+                    content: "---集群版本信息---" + "<br>" +
+                             "kubernetes: " + r.kubernetes.version + "<br>" +
+                             "etcd: " + r.etcd.version + "<br>" +
+                             "cri: " + r.cri.version + "<br>" +
+                             "coredns: " + r.coredns.version + "<br>" + "<br>" +
+                             "---节点信息---" +
+                             node + "<br>" + "<br>" +
+                             "---集群组建状态---" + "<br>" +
+                             "metrics-server: " + r.metricsServer + "<br>" +
+                             "coredns: " + r.coredns.status + "<br>" +
+                             r.network.name + ": " + r.network.status,
+                    type: 'green',
                     buttons: {
                         close: {
                             text: '关闭',
@@ -452,6 +609,24 @@
         });
     }
 
+    function getUpgradeNetworkVersion(){
+        $.ajax({
+            type: 'GET',
+            url: '/console/appmarket?name=' + $('.upgradeNetwork').val() + '&kubeVersion=' + $('.UpgradeKubernetesVersion').val().substring(1),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function(r) {
+                $("#UpgradeNetworkVersion").empty();
+                for (var i = 0; i < r.data.length; i++){
+                    $('#UpgradeNetworkVersion').append($('<option>', {
+                        value: r.data[i].version,
+                        text: r.data[i].version
+                    }));
+                }
+            },
+            // dataType: dataType
+        });
+    }
     function getNetworkVersion(){
         $.ajax({
             type: 'GET',
