@@ -1,0 +1,3 @@
+[submodule "appmarket"]
+	path = appmarket
+	url = https://github.com/buxiaomo/appmarket.git
