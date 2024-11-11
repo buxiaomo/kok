@@ -1240,8 +1240,7 @@ func UpgradeCluster(namespace string, info upgradeInfo) {
 					v := "/var/lib/etcd"
 					return &v
 				}(),
-			},
-			applycorev1.VolumeMountApplyConfiguration{
+			}, applycorev1.VolumeMountApplyConfiguration{
 				Name: func() *string {
 					v := "cache-vol"
 					return &v
@@ -1678,7 +1677,7 @@ func UpgradeCluster(namespace string, info upgradeInfo) {
 						"app":     "kube-apiserver",
 						"project": ns.Labels["project"],
 						"env":     ns.Labels["env"],
-						"version": ns.Labels["kubernetes"],
+						"version": info.Kubernetes,
 					},
 				},
 				Spec: &applycorev1.PodSpecApplyConfiguration{
@@ -2093,7 +2092,7 @@ done`, etcdSvc.Name, etcdSvc.Namespace),
 						"app":     "kube-controller-manager",
 						"project": ns.Labels["project"],
 						"env":     ns.Labels["env"],
-						"version": ns.Labels["kubernetes"],
+						"version": info.Kubernetes,
 					},
 				},
 				Spec: &applycorev1.PodSpecApplyConfiguration{
@@ -2414,7 +2413,7 @@ done`,
 						"app":     "kube-scheduler",
 						"project": ns.Labels["project"],
 						"env":     ns.Labels["env"],
-						"version": ns.Labels["kubernetes"],
+						"version": info.Kubernetes,
 					},
 				},
 				Spec: &applycorev1.PodSpecApplyConfiguration{

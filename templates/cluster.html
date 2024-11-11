@@ -564,8 +564,13 @@
             success: function(r) {
                 var node = ""
                 for (var i = 0; i < r.node.length; i++){
+                    status="NotReady"
+                    if (r.node[i].status.conditions[4].status === "True"){
+                        status = "Ready"
+                    }
                     node = node+"<br>"  + r.node[i].metadata.name + ' ' +
                         r.node[i].status.addresses[0].address + ' ' +
+                        status + ' ' +
                         r.node[i].status.nodeInfo.kubeletVersion + ' ' +
                         r.node[i].status.nodeInfo.osImage + ' ' +
                         r.node[i].status.nodeInfo.kernelVersion + ' ' +

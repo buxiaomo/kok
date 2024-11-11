@@ -23,22 +23,6 @@ get_distribution() {
 	echo "$lsb_dist" | tr '[:upper:]' '[:lower:]'
 }
 
-cni(){
-  info_log "-> Install CNI."
-  version=$1
-  mkdir -p /opt/cni/bin
-  url="https://github.com/containernetworking/plugins/releases/download/${version}/cni-plugins-linux-amd64-${version}.tgz"
-  if [ "$(uname -m)" == "x86_64" ];then
-    url="https://github.com/containernetworking/plugins/releases/download/${version}/cni-plugins-linux-amd64-${version}.tgz"
-  elif [ "$(uname -m)" == "aarch64" ]; then
-    url="https://github.com/containernetworking/plugins/releases/download/${version}/cni-plugins-linux-arm64-${version}.tgz"
-  fi
-  curl -fsSL "${url}" -o /usr/local/src/cni-plugins-linux-${version}.tgz
-#  wget "${url}" -O ""
-  tar -zxf "/usr/local/src/cni-plugins-linux-${version}.tgz" --exclude LICENSE --exclude README.md -C /opt/cni/bin
-  rm -rf "/usr/local/src/cni-plugins-linux-${version}.tgz"
-}
-
 user="$(id -un 2>/dev/null || true)"
 sh_c='sh -c'
 if [ "$user" != 'root' ]; then
@@ -90,12 +74,8 @@ esac
 
 while [ $# -gt 0 ]; do
   case "$1" in
-  --name)
-    export NAME="$2"
-    shift
-    ;;
-  --cri)
-    export CRI="$2"
+  --mirror)
+    export mirror="$2"
     shift
     ;;
   --*)
@@ -104,6 +84,21 @@ while [ $# -gt 0 ]; do
   esac
   shift $(($# > 0 ? 1 : 0))
 done
+
+cni(){
+  version=$1
+  mkdir -p /opt/cni/bin
+  url="${mirror:-"https://github.com"}/containernetworking/plugins/releases/download/${version}/cni-plugins-linux-amd64-${version}.tgz"
+  if [ "$(uname -m)" == "x86_64" ];then
+    url="${mirror:-"https://github.com"}/containernetworking/plugins/releases/download/${version}/cni-plugins-linux-amd64-${version}.tgz"
+  elif [ "$(uname -m)" == "aarch64" ]; then
+    url="${mirror:-"https://github.com"}/containernetworking/plugins/releases/download/${version}/cni-plugins-linux-arm64-${version}.tgz"
+  fi
+  curl -fsSL "${url}" -o /usr/local/src/cni-plugins-linux-${version}.tgz
+#  wget "${url}" -O ""
+  tar -zxf "/usr/local/src/cni-plugins-linux-${version}.tgz" --exclude LICENSE --exclude README.md -C /opt/cni/bin
+  rm -rf "/usr/local/src/cni-plugins-linux-${version}.tgz"
+}
 
 if command_exists firewalld; then
   echo "-> Close Firewalld."
@@ -186,27 +181,31 @@ vm.panic_on_oom=0
 vm.swappiness=0
 EOF
 sysctl --system > /dev/null 2>&1
+
 info_log "-> Close swap."
 swapoff -a
 sed -ri '/^[^#]*swap/s@^@#@' /etc/fstab
 
 
+info_log "-> Install CNI."
 cni "v1.6.0"
+
 
 info_log "-> Install Runc."
 if [ $(uname -m) == "x86_64" ];then
-  wget https://github.com/opencontainers/runc/releases/download/v{{ .Runc }}/runc.amd64 -O /usr/local/bin/runc
+  wget ${mirror:-"https://github.com"}/opencontainers/runc/releases/download/v{{ .Runc }}/runc.amd64 -O /usr/local/bin/runc
 elif [ $(uname -m) == "aarch64" ]; then
-  wget https://github.com/opencontainers/runc/releases/download/v{{ .Runc }}/runc.arm64 -O /usr/local/bin/runc
+  wget ${mirror:-"https://github.com"}/opencontainers/runc/releases/download/v{{ .Runc }}/runc.arm64 -O /usr/local/bin/runc
 fi
 chmod +x /usr/local/bin/runc
 
+
 info_log "-> Install nerdctl."
 if [ $(uname -m) == "x86_64" ];then
-  wget https://github.com/containerd/nerdctl/releases/download/v1.7.7/nerdctl-1.7.7-linux-amd64.tar.gz -O /usr/local/src/nerdctl-1.7.7-linux-amd64.tar.gz
+  wget ${mirror:-"https://github.com"}/containerd/nerdctl/releases/download/v1.7.7/nerdctl-1.7.7-linux-amd64.tar.gz -O /usr/local/src/nerdctl-1.7.7-linux-amd64.tar.gz
   tar -zxf /usr/local/src/nerdctl-1.7.7-linux-amd64.tar.gz -C /usr/local/bin nerdctl
 elif [ $(uname -m) == "aarch64" ]; then
-  wget https://github.com/containerd/nerdctl/releases/download/v1.7.7/nerdctl-1.7.7-linux-arm64.tar.gz -O /usr/local/src/nerdctl-1.7.7-linux-arm64.tar.gz
+  wget ${mirror:-"https://github.com"}/containerd/nerdctl/releases/download/v1.7.7/nerdctl-1.7.7-linux-arm64.tar.gz -O /usr/local/src/nerdctl-1.7.7-linux-arm64.tar.gz
   tar -zxf /usr/local/src/nerdctl-1.7.7-linux-arm64.tar.gz -C /usr/local/bin nerdctl
 fi
 
@@ -215,10 +214,10 @@ info_log "-> Install Containerd."
 # Install containerd
 mkdir -p /etc/containerd
 if [ $(uname -m) == "x86_64" ];then
-  wget https://github.com/containerd/containerd/releases/download/v{{ .Containerd }}/containerd-{{ .Containerd }}-linux-amd64.tar.gz -O /usr/local/src/containerd-{{ .Containerd }}-linux-amd64.tar.gz
+  wget ${mirror:-"https://github.com"}/containerd/containerd/releases/download/v{{ .Containerd }}/containerd-{{ .Containerd }}-linux-amd64.tar.gz -O /usr/local/src/containerd-{{ .Containerd }}-linux-amd64.tar.gz
   tar -zxf /usr/local/src/containerd-{{ .Containerd }}-linux-amd64.tar.gz --strip-components=1 -C /usr/local/bin
 elif [ $(uname -m) == "aarch64" ]; then
-  wget https://github.com/containerd/containerd/releases/download/v{{ .Containerd }}/containerd-{{ .Containerd }}-linux-arm64.tar.gz -O /usr/local/src/containerd-{{ .Containerd }}-linux-arm64.tar.gz
+  wget ${mirror:-"https://github.com"}/containerd/containerd/releases/download/v{{ .Containerd }}/containerd-{{ .Containerd }}-linux-arm64.tar.gz -O /usr/local/src/containerd-{{ .Containerd }}-linux-arm64.tar.gz
   tar -zxf /usr/local/src/containerd-{{ .Containerd }}-linux-arm64.tar.gz --strip-components=1 -C /usr/local/bin
 fi
 
@@ -585,9 +584,9 @@ if [ $(systemctl is-active kubelet.service) == "active" ];then
 fi
 mkdir -p /var/lib/kubelet /etc/kubernetes/pki /etc/kubernetes/manifests
 if [ $(uname -m) == "x86_64" ];then
-  wget https://dl.k8s.io/{{ .Kubernetes }}/bin/linux/amd64/kubelet -O /usr/local/bin/kubelet
+  wget ${mirror:-"https://dl.k8s.io"}/{{ .Kubernetes }}/bin/linux/amd64/kubelet -O /usr/local/bin/kubelet
 elif [ $(uname -m) == "aarch64" ]; then
-  wget https://dl.k8s.io/{{ .Kubernetes }}/bin/linux/arm64/kubelet -O /usr/local/bin/kubelet
+  wget ${mirror:-"https://dl.k8s.io"}/{{ .Kubernetes }}/bin/linux/arm64/kubelet -O /usr/local/bin/kubelet
 fi
 chmod +x /usr/local/bin/kubelet
 cat >/etc/kubernetes/pki/ca.crt <<EOF
@@ -770,15 +769,16 @@ systemctl daemon-reload
 systemctl restart kubelet.service
 systemctl enable kubelet.service
 
+
 # Install kube-proxy
 info_log "-> Install kube-proxy."
 if [ $(systemctl is-active kube-proxy.service) == "active" ];then
   systemctl stop kube-proxy.service
 fi
 if [ $(uname -m) == "x86_64" ];then
-  wget https://dl.k8s.io/{{ .Kubernetes }}/bin/linux/amd64/kube-proxy -O /usr/local/bin/kube-proxy
+  wget ${mirror:-"https://dl.k8s.io"}/{{ .Kubernetes }}/bin/linux/amd64/kube-proxy -O /usr/local/bin/kube-proxy
 elif [ $(uname -m) == "aarch64" ]; then
-  wget https://dl.k8s.io/{{ .Kubernetes }}/bin/linux/arm64/kube-proxy -O /usr/local/bin/kube-proxy
+  wget ${mirror:-"https://dl.k8s.io"}/{{ .Kubernetes }}/bin/linux/arm64/kube-proxy -O /usr/local/bin/kube-proxy
 fi
 chmod +x /usr/local/bin/kube-proxy
 pushd /etc/kubernetes/pki
@@ -871,5 +871,6 @@ EOF
 systemctl daemon-reload
 systemctl restart kube-proxy.service
 systemctl enable kube-proxy.service
+
 
 info_log "-> Start service, please run 'kubectl get no' command on master check the node status."
