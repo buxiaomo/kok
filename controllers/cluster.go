@@ -744,11 +744,17 @@ func UpgradeCluster(namespace string, info upgradeInfo) {
 		panic(err.Error())
 	}
 	var (
-		v          db.Version
-		patchBytes []byte
+		v              db.Version
+		patchBytes     []byte
+		networkVersion string
 	)
 	if info.Kubernetes != ns.Labels["kubernetes"] {
 		versionInfo, _ := v.Select(info.Kubernetes)
+		if info.NetworkVersion == "None" {
+			networkVersion = ns.Labels["networkVersion"]
+		} else {
+			networkVersion = info.NetworkVersion
+		}
 		patchBytes, _ = json.Marshal(map[string]interface{}{
 			"metadata": map[string]interface{}{
 				"labels": map[string]string{
@@ -761,7 +767,7 @@ func UpgradeCluster(namespace string, info upgradeInfo) {
 					"metrics-server":     versionInfo.MetricsServer,
 					"pause":              versionInfo.Pause,
 					"runc":               versionInfo.Runc,
-					"networkVersion":     info.NetworkVersion,
+					"networkVersion":     networkVersion,
 				},
 			},
 		})
@@ -2690,90 +2696,93 @@ done`,
 			klog.Warning(err.Error())
 		}
 
-		// 升级 cni
 		remoteAppMarket := appmarket.New(fmt.Sprintf("./data/kubeconfig/%s.kubeconfig", namespace))
-		switch ns.Labels["network"] {
-		case "flannel":
-			remoteAppMarket.Chart().Install("kube-system", "flannel", "flannel", false, info.NetworkVersion, map[string]interface{}{
-				"subNet": strings.Replace(ns.Labels["podSubnet"], "-", "/", 1),
-			})
-		case "calico":
-			remoteAppMarket.Chart().Install("kube-system", "calico", "calico", false, info.NetworkVersion, map[string]interface{}{
-				"subNet": strings.Replace(ns.Labels["podSubnet"], "-", "/", 1),
-			})
-		case "canal":
-			remoteAppMarket.Chart().Install("kube-system", "canal", "canal", false, info.NetworkVersion, map[string]interface{}{
-				"subNet": strings.Replace(ns.Labels["podSubnet"], "-", "/", 1),
-			})
-		case "antrea":
-			remoteAppMarket.Chart().Install("kube-system", "antrea", "antrea", false, info.NetworkVersion, map[string]interface{}{
-				"subNet": strings.Replace(ns.Labels["podSubnet"], "-", "/", 1),
-			})
-		case "cilium":
-			remoteAppMarket.Chart().Install("kube-system", "cilium", "cilium", false, info.NetworkVersion, map[string]interface{}{
-				"installNoConntrackIptablesRules": true,
-				"externalIPs": map[string]interface{}{
-					"enabled": true,
-				},
-				"nodePort": map[string]interface{}{
-					"enabled": true,
-				},
-				"hostPort": map[string]interface{}{
-					"enabled": true,
-				},
-				"socketLB": map[string]interface{}{
-					"enabled": true,
-				},
-				"loadBalancer": map[string]interface{}{
-					"mode":         "snat",
-					"acceleration": "native",
-				},
-				"bpf": map[string]interface{}{
-					"masquerade": true,
-				},
-				"ipam": map[string]interface{}{
-					"operator": map[string]interface{}{
-						"clusterPoolIPv4PodCIDRList": []string{strings.Replace(ns.Labels["podSubnet"], "-", "/", 1)},
-						"clusterPoolIPv4MaskSize":    24,
-					},
-				},
-				"bandwidthManager": map[string]interface{}{
-					"bbr": true,
-				},
-				"cni": map[string]interface{}{
-					"chainingMode": "portmap",
-				},
-				"cgroup": map[string]interface{}{
-					"autoMount": map[string]interface{}{
-						"enabled": false,
-					},
-				},
-				"securityContext": map[string]interface{}{
-					"privileged": true,
-				},
-				"hubble": map[string]interface{}{
-					"enabled": true,
-					"ui": map[string]interface{}{
+
+		if info.NetworkVersion != "None" {
+			// 升级 cni
+			switch ns.Labels["network"] {
+			case "flannel":
+				remoteAppMarket.Chart().Install("kube-system", "flannel", "flannel", false, info.NetworkVersion, map[string]interface{}{
+					"subNet": strings.Replace(ns.Labels["podSubnet"], "-", "/", 1),
+				})
+			case "calico":
+				remoteAppMarket.Chart().Install("kube-system", "calico", "calico", false, info.NetworkVersion, map[string]interface{}{
+					"subNet": strings.Replace(ns.Labels["podSubnet"], "-", "/", 1),
+				})
+			case "canal":
+				remoteAppMarket.Chart().Install("kube-system", "canal", "canal", false, info.NetworkVersion, map[string]interface{}{
+					"subNet": strings.Replace(ns.Labels["podSubnet"], "-", "/", 1),
+				})
+			case "antrea":
+				remoteAppMarket.Chart().Install("kube-system", "antrea", "antrea", false, info.NetworkVersion, map[string]interface{}{
+					"subNet": strings.Replace(ns.Labels["podSubnet"], "-", "/", 1),
+				})
+			case "cilium":
+				remoteAppMarket.Chart().Install("kube-system", "cilium", "cilium", false, info.NetworkVersion, map[string]interface{}{
+					"installNoConntrackIptablesRules": true,
+					"externalIPs": map[string]interface{}{
 						"enabled": true,
 					},
-					"relay": map[string]interface{}{
+					"nodePort": map[string]interface{}{
 						"enabled": true,
 					},
-					"metrics": map[string]interface{}{
-						"enableOpenMetrics": true,
+					"hostPort": map[string]interface{}{
+						"enabled": true,
 					},
-				},
-				"prometheus": map[string]interface{}{
-					"enabled": true,
-				},
-				"operator": map[string]interface{}{
+					"socketLB": map[string]interface{}{
+						"enabled": true,
+					},
+					"loadBalancer": map[string]interface{}{
+						"mode":         "snat",
+						"acceleration": "native",
+					},
+					"bpf": map[string]interface{}{
+						"masquerade": true,
+					},
+					"ipam": map[string]interface{}{
+						"operator": map[string]interface{}{
+							"clusterPoolIPv4PodCIDRList": []string{strings.Replace(ns.Labels["podSubnet"], "-", "/", 1)},
+							"clusterPoolIPv4MaskSize":    24,
+						},
+					},
+					"bandwidthManager": map[string]interface{}{
+						"bbr": true,
+					},
+					"cni": map[string]interface{}{
+						"chainingMode": "portmap",
+					},
+					"cgroup": map[string]interface{}{
+						"autoMount": map[string]interface{}{
+							"enabled": false,
+						},
+					},
+					"securityContext": map[string]interface{}{
+						"privileged": true,
+					},
+					"hubble": map[string]interface{}{
+						"enabled": true,
+						"ui": map[string]interface{}{
+							"enabled": true,
+						},
+						"relay": map[string]interface{}{
+							"enabled": true,
+						},
+						"metrics": map[string]interface{}{
+							"enableOpenMetrics": true,
+						},
+					},
 					"prometheus": map[string]interface{}{
 						"enabled": true,
 					},
-				},
-			})
-		case "none":
-			fmt.Println("network plugin is none, skip..")
+					"operator": map[string]interface{}{
+						"prometheus": map[string]interface{}{
+							"enabled": true,
+						},
+					},
+				})
+			case "none":
+				fmt.Println("network plugin is none, skip..")
+			}
 		}
 
 		// 升级 coredns

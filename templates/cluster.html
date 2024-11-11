@@ -564,10 +564,17 @@
             success: function(r) {
                 var node = ""
                 for (var i = 0; i < r.node.length; i++){
-                    status="NotReady"
-                    if (r.node[i].status.conditions[4].status === "True"){
-                        status = "Ready"
+                    console.log(r.node[i]);
+                    var status="NotReady"
+                    for (var j = 0; j < r.node[i].status.conditions.length; j++){
+                        if (r.node[i].status.conditions[j].type === "Ready"){
+                            if (r.node[i].status.conditions[j].status === "True"){
+                                status = "Ready"
+                                break
+                            }
+                        }
                     }
+
                     node = node+"<br>"  + r.node[i].metadata.name + ' ' +
                         r.node[i].status.addresses[0].address + ' ' +
                         status + ' ' +
@@ -622,6 +629,10 @@
             dataType: "json",
             success: function(r) {
                 $("#UpgradeNetworkVersion").empty();
+                $('#UpgradeNetworkVersion').append($('<option>', {
+                    value: "None",
+                    text: "不升级"
+                }));
                 for (var i = 0; i < r.data.length; i++){
                     $('#UpgradeNetworkVersion').append($('<option>', {
                         value: r.data[i].version,
