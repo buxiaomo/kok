@@ -1,3 +1,4 @@
+{{ $esUrl := (.Values.elasticsearch.url | urlParse) -}}
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
@@ -17,6 +18,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: elasticsearch
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: "{{ $esUrl.hostname }}"
 spec:
   selector:
     name: elasticsearch
