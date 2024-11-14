@@ -54,12 +54,12 @@ erichough/nfs-server:2.2.1
 kind create cluster --name kok --image docker.m.moby.org.cn/kindest/node:v1.30.2
 sudo bin/cloud-provider-kind
 
-helm upgrade -i kok ./kok -n kok --create-namespace
+helm upgrade -i kok ./kok -n kok-system --create-namespace
 
 kubectl get svc -n kok
 
 # get EXTERNAL-IP and redeploy
-helm upgrade -i kok ./kok -n kok --create-namespace \
+helm upgrade -i kok ./kok -n kok-system --create-namespace \
 --set prometheus.url=http://<EXTERNAL-IP>:9090  \
 --set elasticsearch.url=http://<EXTERNAL-IP>:9200
 ```
