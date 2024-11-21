@@ -4,6 +4,10 @@ This project is deploy kubernetes control-plane on k8s.
 
 Can help you create any version of kubernetes control plane in 1 minute..
 
+```shell
+git submodule update --init --remote --recursive
+```
+
 ## Depend-on
 
 ### fluent-operator
