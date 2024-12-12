@@ -36,7 +36,7 @@ Will be used to expose the kube-apiserver service and communicate with apiserver
 
 ### StorageClass
 
-Will be used to store individual cluster etcd data and certificate files.
+Will be used to store individual cluster etcd data.
 
 * [nfs-subdir-external-provisioner](https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner)
   > `kubectl patch storageclass nfs-client -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'`
