@@ -12,7 +12,7 @@ FROM alpine:3.20.3
 RUN apk add --no-cache curl bash sqlite bash-completion git \
     && adduser -D -h /app -u 1000 app
 WORKDIR /app
-ARG KUBE_VERSION=v1.31.1
+ARG KUBE_VERSION=v1.32.0
 RUN if [ `uname -m` = "x86_64" ]; then \
         wget -q https://dl.k8s.io/${KUBE_VERSION}/bin/linux/amd64/kubectl -O /usr/local/bin/kubectl;  \
     else \

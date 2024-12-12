@@ -22,4 +22,4 @@ docker buildx build --platform=linux/amd64,linux/arm64 --no-cache --push --build
 
 docker buildx build --platform=linux/amd64,linux/arm64 --no-cache --push --build-arg ETCD_VERSION=v3.5.15 -t buxiaomo/etcd:3.5.15-0 .
 
-docker buildx build --platform=linux/amd64,linux/arm64 --no-cache --build-arg ETCD_VERSION=v3.5.16 -t buxiaomo/etcd:3.5.16-0 .
+docker buildx build --platform=linux/amd64,linux/arm64 --no-cache --push --build-arg ETCD_VERSION=v3.5.16 -t buxiaomo/etcd:3.5.16-0 .

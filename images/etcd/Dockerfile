@@ -1,11 +1,20 @@
 FROM alpine:3.20.1 AS builder
 ARG ETCD_VERSION=v3.5.14
-RUN wget https://github.com/etcd-io/etcd/releases/download/${ETCD_VERSION}/etcd-${ETCD_VERSION}-linux-amd64.tar.gz -O /tmp/etcd.tar.gz \
-    && tar -zxf /tmp/etcd.tar.gz -C /tmp \
-    && mv /tmp/etcd-${ETCD_VERSION}-linux-amd64 /tmp/etcd
 
-RUN wget https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64 -O /usr/local/bin/jq \
-        && chmod +x /usr/local/bin/jq
+RUN if [ `uname -m` = "x86_64" ]; then \
+        wget https://github.com/etcd-io/etcd/releases/download/${ETCD_VERSION}/etcd-${ETCD_VERSION}-linux-amd64.tar.gz -O /tmp/etcd.tar.gz;  \
+    else \
+        wget https://github.com/etcd-io/etcd/releases/download/${ETCD_VERSION}/etcd-${ETCD_VERSION}-linux-arm64.tar.gz -O /tmp/etcd.tar.gz; \
+    fi \
+    && mkdir -p /tmp/etcd \
+    && tar -zxf /tmp/etcd.tar.gz --strip-components=1 -C /tmp/etcd
+
+RUN if [ `uname -m` = "x86_64" ]; then \
+        wget https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64 -O /usr/local/bin/jq;  \
+    else \
+        wget https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-arm64 -O /usr/local/bin/jq; \
+    fi \
+    && chmod +x /usr/local/bin/jq
 
 FROM alpine:3.20.1
 RUN apk add --no-cache curl

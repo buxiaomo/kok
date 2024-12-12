@@ -39,7 +39,21 @@ Will be used to expose the kube-apiserver service and communicate with apiserver
 Will be used to store individual cluster etcd data.
 
 * [nfs-subdir-external-provisioner](https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner)
-  > `kubectl patch storageclass nfs-client -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'`
+  > ```shell
+  > # install nfs on ubuntu
+  > mkdir -p /data/kubernetes
+  > apt-get install nfs-kernel-server nfs-common -y
+  > echo "/data/kubernetes *(rw,sync,insecure,no_subtree_check,no_root_squash)" >> /etc/exports
+  > systemctl restart nfs-kernel-server
+  > systemctl enable nfs-kernel-server
+  > 
+  > # patch sc
+  > helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/
+  > helm upgrade -i nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner -n kube-system \
+  > --set nfs.path=/data/kubernetes \
+  > --set nfs.server=172.16.115.11
+  > kubectl patch storageclass nfs-client -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+  >```
 
 
 ## Quick start
