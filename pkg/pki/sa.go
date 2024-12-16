@@ -21,7 +21,7 @@ func (app pki) Sa() sa {
 
 func (app sa) Signature() {
 	// 生成私钥文件
-	privateKey, err := rsa.GenerateKey(rand.Reader, 1024)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		panic(err)
 	}

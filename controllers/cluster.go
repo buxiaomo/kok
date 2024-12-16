@@ -2960,6 +2960,9 @@ func ClusterCreate(c *gin.Context) {
 	}
 
 	vinfo, err := v.Select(info.Version)
+	if err != nil {
+		panic(err)
+	}
 	kubernetesAddr, _ := utils.GetCidrIpRange(info.ServiceCidr)      // 10.96.0.1 use by ca
 	clusterDNS := utils.Increment(kubernetesAddr, int64(1)).String() // 10.96.0.2 use by coredns
 

@@ -22,11 +22,11 @@ func init() {
 	viper.AutomaticEnv()
 
 	if _, err := os.Stat("./data"); err != nil {
-		os.Mkdir("./data", 0755)
+		os.Mkdir("./data", 0700)
 	}
 
 	if _, err := os.Stat("./data/kubeconfig"); err != nil {
-		os.Mkdir("./data/kubeconfig", 0755)
+		os.Mkdir("./data/kubeconfig", 0700)
 	}
 
 	kc := control.New("")
