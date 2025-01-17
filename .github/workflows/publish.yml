@@ -3,24 +3,9 @@ name: Publish Package
 on:
   push:
 
-permissions:
-  packages: write
-  attestations: write
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
 jobs:
   release:
-    runs-on: ubuntu-20.04
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout

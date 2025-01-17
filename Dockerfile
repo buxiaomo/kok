@@ -8,12 +8,12 @@ RUN go mod download
 COPY . /go/src/app/
 RUN CGO_ENABLED=1 GO111MODULE=on GOOS=linux go build -o main main.go
 
-FROM alpine:3.21.0
+FROM alpine:3.21.2
 RUN apk --no-cache upgrade \
     && apk add --no-cache curl bash sqlite bash-completion git \
     && adduser -D -h /app -u 1000 app
 WORKDIR /app
-ARG KUBE_VERSION=v1.32.0
+ARG KUBE_VERSION=v1.32.1
 RUN if [ `uname -m` = "x86_64" ]; then \
         wget -q https://dl.k8s.io/${KUBE_VERSION}/bin/linux/amd64/kubectl -O /usr/local/bin/kubectl;  \
     else \
