@@ -15,7 +15,6 @@ cluster = {
 }
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  config.env.enable
   cluster.each_with_index do |(hostname, info), index|
     config.vm.define hostname do |cfg|
       cfg.vm.provider :virtualbox do |vb, override|
