@@ -72,8 +72,16 @@ erichough/nfs-server:2.2.1
 kind create cluster --name kok --image docker.m.moby.org.cn/kindest/node:v1.30.2
 sudo bin/cloud-provider-kind
 
+cat > /etc/buildkit/buildkitd.toml <<EOF
+debug = true
+trace = true
+[registry."192.168.2.3:5000"]
+  http = true
+EOF
 
 docker buildx create --use --bootstrap --name multi-platform --driver docker-container --buildkitd-config /etc/buildkit/buildkitd.toml
+
+docker buildx build --platform linux/amd64,linux/arm64 -t buxiaomo/kok:latest .
 
 helm upgrade -i kok ./kok -n kok-system --create-namespace \
 --set prometheus.url=http://<PROMETHEUS EXTERNAL-IP>:9090  \
